@@ -5,7 +5,7 @@ using Fhsm.Compiler.Graph;
 
 namespace Fhsm.Compiler
 {
-    internal class HsmNormalizer
+    public class HsmNormalizer
     {
         /// <summary>
         /// Normalize graph: assign indices, compute depths, resolve initial states.

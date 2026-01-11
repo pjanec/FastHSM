@@ -8,7 +8,12 @@ namespace Fhsm.Examples.Console
     {
         static void Main(string[] args)
         {
-            System.Console.WriteLine("=== FastHSM Console Demo ===\n");
+            System.Console.WriteLine("FastHSM Examples\n");
+            
+            TrafficLightExample.Run();
+            
+            System.Console.WriteLine("\nPress any key to exit...");
+            System.Console.ReadKey();
         }
     }
 }

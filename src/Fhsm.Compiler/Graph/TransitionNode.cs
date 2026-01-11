@@ -2,7 +2,7 @@ using System;
 
 namespace Fhsm.Compiler.Graph
 {
-    internal class TransitionNode
+    public class TransitionNode
     {
         public StateNode Source { get; set; }
         public StateNode Target { get; set; }

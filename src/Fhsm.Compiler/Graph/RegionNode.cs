@@ -2,7 +2,7 @@ using System;
 
 namespace Fhsm.Compiler.Graph
 {
-    internal class RegionNode
+    public class RegionNode
     {
         public string Name { get; set; }
         public StateNode InitialState { get; set; }

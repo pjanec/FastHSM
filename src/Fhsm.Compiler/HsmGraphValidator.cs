@@ -5,7 +5,7 @@ using Fhsm.Compiler.Graph;
 
 namespace Fhsm.Compiler
 {
-    internal class HsmGraphValidator
+    public class HsmGraphValidator
     {
         public class ValidationError
         {

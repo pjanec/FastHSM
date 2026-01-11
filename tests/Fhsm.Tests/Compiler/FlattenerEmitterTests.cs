@@ -89,11 +89,23 @@ namespace Fhsm.Tests.Compiler
             // Should have 1 entry in ActionIds
             Assert.Single(data.ActionIds);
             
-            // States should point to index 0
-            Assert.Equal(0, data.States[1].OnEntryActionId);
-            Assert.Equal(0, data.States[1].OnExitActionId);
+            // Both should point to same hash ID (since same action name)
+            ushort expectedHash = ComputeHash("MyAction");
+            Assert.Equal(expectedHash, data.States[1].OnEntryActionId);
+            Assert.Equal(expectedHash, data.States[1].OnExitActionId);
             
             Assert.Equal(0xFFFF, data.States[1].ActivityActionId); // None
+        }
+        
+        private static ushort ComputeHash(string name)
+        {
+            uint hash = 2166136261;
+            foreach (char c in name)
+            {
+                hash ^= c;
+                hash *= 16777619;
+            }
+            return (ushort)(hash & 0xFFFF);
         }
 
         [Fact]

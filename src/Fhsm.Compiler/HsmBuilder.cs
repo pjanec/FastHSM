@@ -41,6 +41,8 @@ namespace Fhsm.Compiler
             _graph.RegisteredGuards.Add(functionName);
             return this;
         }
+
+        public StateMachineGraph Build() => _graph;
         
         // Internal: Get graph for compiler
         internal StateMachineGraph GetGraph() => _graph;
@@ -54,6 +56,8 @@ namespace Fhsm.Compiler
         private readonly StateNode _state;
         private readonly StateMachineGraph _graph;
         
+        public StateNode State => _state;
+
         internal StateBuilder(StateNode state, StateMachineGraph graph)
         {
             _state = state;
@@ -109,6 +113,11 @@ namespace Fhsm.Compiler
             
             return new TransitionBuilder(_state, eventId, _graph);
         }
+
+        public TransitionBuilder On(ushort eventId)
+        {
+            return new TransitionBuilder(_state, eventId, _graph);
+        }
     }
     
     /// <summary>
@@ -137,6 +146,13 @@ namespace Fhsm.Compiler
                 throw new InvalidOperationException($"Target state '{targetStateName}' not found");
             
             _transition.Target = target;
+            _source.AddTransition(_transition);
+            return this;
+        }
+
+        public TransitionBuilder GoTo(StateBuilder target)
+        {
+            _transition.Target = target.State;
             _source.AddTransition(_transition);
             return this;
         }

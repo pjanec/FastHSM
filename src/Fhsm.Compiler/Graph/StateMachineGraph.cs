@@ -6,7 +6,7 @@ namespace Fhsm.Compiler.Graph
     /// <summary>
     /// Root container for state machine graph before compilation.
     /// </summary>
-    internal class StateMachineGraph
+    public class StateMachineGraph
     {
         public string Name { get; set; }
         public Guid MachineId { get; set; }

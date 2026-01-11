@@ -21,7 +21,7 @@ namespace Fhsm.Compiler
         /// <summary>
         /// Flatten normalized graph to ROM arrays.
         /// </summary>
-        internal static FlattenedData Flatten(StateMachineGraph graph)
+        public static FlattenedData Flatten(StateMachineGraph graph)
         {
             if (graph == null) throw new ArgumentNullException(nameof(graph));
             
@@ -104,18 +104,18 @@ namespace Fhsm.Compiler
                 }
             }
             
-            // Assign sequential IDs (sorted for determinism)
-            var sorted = actions.OrderBy(a => a).ToList();
+            // Assign Hash IDs
             var table = new Dictionary<string, ushort>();
-            
-            for (ushort i = 0; i < sorted.Count; i++)
+            foreach(var action in actions)
             {
-                table[sorted[i]] = i;
+                ushort h = ComputeHash(action);
+                // System.Console.WriteLine($"[Flattener] Action '{action}' -> {h}");
+                table[action] = h;
             }
             
             return table;
         }
-        
+
         private static Dictionary<string, ushort> BuildGuardTable(StateMachineGraph graph)
         {
             // Similar to BuildActionTable but for guards
@@ -135,12 +135,11 @@ namespace Fhsm.Compiler
                 }
             }
             
-            var sorted = guards.OrderBy(g => g).ToList();
+            // Assign Hash IDs
             var table = new Dictionary<string, ushort>();
-            
-            for (ushort i = 0; i < sorted.Count; i++)
+            foreach(var guard in guards)
             {
-                table[sorted[i]] = i;
+                table[guard] = ComputeHash(guard);
             }
             
             return table;
@@ -358,6 +357,17 @@ namespace Fhsm.Compiler
             }
             
             return result;
+        }
+
+        private static ushort ComputeHash(string name)
+        {
+            uint hash = 2166136261;
+            foreach (char c in name)
+            {
+                hash ^= c;
+                hash *= 16777619;
+            }
+            return (ushort)(hash & 0xFFFF);
         }
     }
 }

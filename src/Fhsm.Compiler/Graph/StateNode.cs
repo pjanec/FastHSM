@@ -7,7 +7,7 @@ namespace Fhsm.Compiler.Graph
     /// Intermediate representation of a state during compilation.
     /// Mutable graph node before flattening.
     /// </summary>
-    internal class StateNode
+    public class StateNode
     {
         public Guid StableId { get; set; }  // For hot reload stability
         public string Name { get; set; }

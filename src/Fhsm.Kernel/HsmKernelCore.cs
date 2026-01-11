@@ -104,9 +104,7 @@ namespace Fhsm.Kernel
                     break;
                     
                 case InstancePhase.Activity:
-                    // Activities would go here (Batch 10)
-                    // Return to Idle
-                    header->Phase = InstancePhase.Idle;
+                    ProcessActivityPhase(definition, instancePtr, instanceSize, contextPtr, deltaTime);
                     break;
             }
         }
@@ -199,6 +197,44 @@ namespace Fhsm.Kernel
             }
             
             // No more events, go to Idle
+            header->Phase = InstancePhase.Idle;
+        }
+
+        // --- Task 4: Activity Phase ---
+
+        private static void ProcessActivityPhase(
+            HsmDefinitionBlob definition,
+            byte* instancePtr,
+            int instanceSize,
+            void* contextPtr,
+            float deltaTime)
+        {
+            InstanceHeader* header = (InstanceHeader*)instancePtr;
+            ushort* activeLeafIds = GetActiveLeafIds(instancePtr, instanceSize, out int regionCount);
+            
+            // Execute activities for all active states
+            for (int r = 0; r < regionCount; r++)
+            {
+                ushort leafId = activeLeafIds[r];
+                if (leafId == 0xFFFF) continue;
+                
+                // Walk up from leaf to root, executing activities
+                ushort current = leafId;
+                while (current != 0xFFFF)
+                {
+                    ref readonly var state = ref definition.GetState(current);
+                    
+                    // Execute activity if present
+                    if (state.ActivityActionId != 0 && state.ActivityActionId != 0xFFFF)
+                    {
+                        ExecuteAction(state.ActivityActionId, instancePtr, contextPtr, 0);
+                    }
+                    
+                    current = state.ParentIndex;
+                }
+            }
+            
+            // Return to Idle
             header->Phase = InstancePhase.Idle;
         }
 
