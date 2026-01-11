@@ -74,11 +74,9 @@ namespace Fhsm.Kernel.Data
     public enum InstancePhase : byte
     {
         Idle = 0,           // Not executing
-        Setup = 1,          // Phase 0: Validation
-        Timers = 2,         // Phase 1: Timer processing
-        RTC = 3,            // Phase 2: Run-to-completion
-        Update = 4,         // Phase 3: Activities
-        Complete = 5,       // Tick finished
+        Entry = 1,          // Phase 1: Entry/Pre-tick processing
+        RTC = 2,            // Phase 2: Run-to-completion (transitions)
+        Activity = 3,       // Phase 3: Activities (Update)
     }
 
     /// <summary>

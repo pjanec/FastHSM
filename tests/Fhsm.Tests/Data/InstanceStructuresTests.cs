@@ -122,14 +122,14 @@ namespace Fhsm.Tests.Data
                 RandomSeed = 67890,
                 Generation = 1,
                 Flags = InstanceFlags.Error,
-                Phase = InstancePhase.Update
+                Phase = InstancePhase.Activity
             };
 
             Assert.Equal(12345u, header.MachineId);
             Assert.Equal(67890u, header.RandomSeed);
             Assert.Equal(1, header.Generation);
             Assert.Equal(InstanceFlags.Error, header.Flags);
-            Assert.Equal(InstancePhase.Update, header.Phase);
+            Assert.Equal(InstancePhase.Activity, header.Phase);
         }
 
         [Fact]
