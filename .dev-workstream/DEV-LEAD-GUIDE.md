@@ -25,10 +25,12 @@ You are the **Development Lead** managing implementation work through a structur
 ## 📋 Folder Structure Overview
 
 ```
+
 .dev-workstream/
 ├── README.md                      # Developer workflow guide (generic)
 ├── DEV-LEAD-GUIDE.md             # This file (your guide)
 ├── TASK-TRACKER.md               # Master progress tracker (you maintain)
+├── TASK-DEFINITIONS.md           # Brief defs of all taks (you create), hevily referencing the design docs
 │
 ├── templates/                     # Reusable templates
 │   ├── BATCH-REPORT-TEMPLATE.md
@@ -638,6 +640,13 @@ Update TASK-TRACKER.md:
 *Corrections required - see BATCH-12.1
 ```
 
+Keep TASK-TRACKER.md brief with references to TASK-DEFINITIONS.
+
+The workflow is:
+  * TASK-DEFINITIONS.md → Understand what needs to be built
+  * Design docs → Understand how it should work
+  * TASK-TRACKER.md → Check status
+  * BATCH-XX-INSTRUCTIONS.md → Get specific implementation tasks
 ---
 
 ## 📝 Git Commit Message Generation

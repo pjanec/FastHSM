@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Fhsm.Kernel\Fhsm.Kernel.csproj" />
+    <ProjectReference Include="..\..\src\Fhsm.Compiler\Fhsm.Compiler.csproj" />
   </ItemGroup>
 
 </Project>
