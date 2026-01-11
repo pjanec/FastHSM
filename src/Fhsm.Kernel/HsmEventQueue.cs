@@ -26,6 +26,57 @@ namespace Fhsm.Kernel
         private const int Tier3_Ring_Offset = 100 + 24; // 124
         private const int Tier3_Ring_Capacity = 5; // (156-24)/24 = 5.5 -> 5
 
+        // === Type-erased (void*) Overloads for Kernel Core ===
+
+        public static unsafe bool TryEnqueue(void* instance, int size, in HsmEvent evt)
+        {
+            if (instance == null) return false;
+
+            switch (size)
+            {
+                case 64: return EnqueueTier1((byte*)instance, evt);
+                case 128: return EnqueueTier2((byte*)instance, evt, Tier2_IntSlotUsed_Offset, Tier2_EventCount_Offset, Tier2_Buffer_Offset, Tier2_Ring_Offset, Tier2_Ring_Capacity);
+                case 256: return EnqueueTier2((byte*)instance, evt, Tier3_IntSlotUsed_Offset, Tier3_EventCount_Offset, Tier3_Buffer_Offset, Tier3_Ring_Offset, Tier3_Ring_Capacity);
+                default: throw new ArgumentException("Invalid instance size");
+            }
+        }
+
+        public static unsafe bool TryDequeue(void* instance, int size, out HsmEvent evt)
+        {
+            Unsafe.SkipInit(out evt);
+            if (instance == null) return false;
+
+            switch (size)
+            {
+                case 64: return DequeueTier1((byte*)instance, out evt);
+                case 128: return DequeueTier2((byte*)instance, out evt, Tier2_IntSlotUsed_Offset, Tier2_EventCount_Offset, Tier2_Buffer_Offset, Tier2_Ring_Offset, Tier2_Ring_Capacity);
+                case 256: return DequeueTier2((byte*)instance, out evt, Tier3_IntSlotUsed_Offset, Tier3_EventCount_Offset, Tier3_Buffer_Offset, Tier3_Ring_Offset, Tier3_Ring_Capacity);
+                default: throw new ArgumentException("Invalid instance size");
+            }
+        }
+
+        public static unsafe int GetCount(void* instance, int size)
+        {
+            if (instance == null) return 0;
+            byte* ptr = (byte*)instance;
+            
+            if (size == 64)
+            {
+                return ptr[Tier1_EventCount_Offset];
+            }
+            else if (size == 128)
+            {
+                return ptr[Tier2_IntSlotUsed_Offset] + ptr[Tier2_EventCount_Offset];
+            }
+            else if (size == 256)
+            {
+                return ptr[Tier3_IntSlotUsed_Offset] + ptr[Tier3_EventCount_Offset];
+            }
+            return 0;
+        }
+
+        // === Generic API ===
+
         public static unsafe bool TryEnqueue<T>(T* instance, in HsmEvent evt) where T : unmanaged
         {
             if (instance == null) return false;
@@ -33,9 +84,9 @@ namespace Fhsm.Kernel
             int size = sizeof(T);
             switch (size)
             {
-                case 64: return EnqueueTier1(instance, evt);
-                case 128: return EnqueueTier2(instance, evt, Tier2_IntSlotUsed_Offset, Tier2_EventCount_Offset, Tier2_Buffer_Offset, Tier2_Ring_Offset, Tier2_Ring_Capacity);
-                case 256: return EnqueueTier2(instance, evt, Tier3_IntSlotUsed_Offset, Tier3_EventCount_Offset, Tier3_Buffer_Offset, Tier3_Ring_Offset, Tier3_Ring_Capacity);
+                case 64: return EnqueueTier1((byte*)instance, evt);
+                case 128: return EnqueueTier2((byte*)instance, evt, Tier2_IntSlotUsed_Offset, Tier2_EventCount_Offset, Tier2_Buffer_Offset, Tier2_Ring_Offset, Tier2_Ring_Capacity);
+                case 256: return EnqueueTier2((byte*)instance, evt, Tier3_IntSlotUsed_Offset, Tier3_EventCount_Offset, Tier3_Buffer_Offset, Tier3_Ring_Offset, Tier3_Ring_Capacity);
                 default: throw new ArgumentException("Invalid instance size");
             }
         }
@@ -48,9 +99,9 @@ namespace Fhsm.Kernel
             int size = sizeof(T);
             switch (size)
             {
-                case 64: return DequeueTier1(instance, out evt);
-                case 128: return DequeueTier2(instance, out evt, Tier2_IntSlotUsed_Offset, Tier2_EventCount_Offset, Tier2_Buffer_Offset, Tier2_Ring_Offset, Tier2_Ring_Capacity);
-                case 256: return DequeueTier2(instance, out evt, Tier3_IntSlotUsed_Offset, Tier3_EventCount_Offset, Tier3_Buffer_Offset, Tier3_Ring_Offset, Tier3_Ring_Capacity);
+                case 64: return DequeueTier1((byte*)instance, out evt);
+                case 128: return DequeueTier2((byte*)instance, out evt, Tier2_IntSlotUsed_Offset, Tier2_EventCount_Offset, Tier2_Buffer_Offset, Tier2_Ring_Offset, Tier2_Ring_Capacity);
+                case 256: return DequeueTier2((byte*)instance, out evt, Tier3_IntSlotUsed_Offset, Tier3_EventCount_Offset, Tier3_Buffer_Offset, Tier3_Ring_Offset, Tier3_Ring_Capacity);
                 default: throw new ArgumentException("Invalid instance size");
             }
         }
@@ -63,9 +114,9 @@ namespace Fhsm.Kernel
             int size = sizeof(T);
             switch (size)
             {
-                case 64: return PeekTier1(instance, out evt);
-                case 128: return PeekTier2(instance, out evt, Tier2_IntSlotUsed_Offset, Tier2_EventCount_Offset, Tier2_Buffer_Offset, Tier2_Ring_Offset, Tier2_Ring_Capacity);
-                case 256: return PeekTier2(instance, out evt, Tier3_IntSlotUsed_Offset, Tier3_EventCount_Offset, Tier3_Buffer_Offset, Tier3_Ring_Offset, Tier3_Ring_Capacity);
+                case 64: return PeekTier1((byte*)instance, out evt);
+                case 128: return PeekTier2((byte*)instance, out evt, Tier2_IntSlotUsed_Offset, Tier2_EventCount_Offset, Tier2_Buffer_Offset, Tier2_Ring_Offset, Tier2_Ring_Capacity);
+                case 256: return PeekTier2((byte*)instance, out evt, Tier3_IntSlotUsed_Offset, Tier3_EventCount_Offset, Tier3_Buffer_Offset, Tier3_Ring_Offset, Tier3_Ring_Capacity);
                 default: throw new ArgumentException("Invalid instance size");
             }
         }
@@ -121,9 +172,8 @@ namespace Fhsm.Kernel
 
         // --- Tier 1 Implementation ---
 
-        private static unsafe bool EnqueueTier1<T>(T* instance, in HsmEvent evt) where T : unmanaged
+        private static unsafe bool EnqueueTier1(byte* ptr, in HsmEvent evt)
         {
-            byte* ptr = (byte*)instance;
             ref byte count = ref ptr[Tier1_EventCount_Offset];
             byte* buffer = ptr + Tier1_Buffer_Offset;
 
@@ -148,9 +198,8 @@ namespace Fhsm.Kernel
             return false;
         }
 
-        private static unsafe bool DequeueTier1<T>(T* instance, out HsmEvent evt) where T : unmanaged
+        private static unsafe bool DequeueTier1(byte* ptr, out HsmEvent evt)
         {
-            byte* ptr = (byte*)instance;
             ref byte count = ref ptr[Tier1_EventCount_Offset];
             
             if (count > 0)
@@ -164,9 +213,8 @@ namespace Fhsm.Kernel
             return false;
         }
 
-        private static unsafe bool PeekTier1<T>(T* instance, out HsmEvent evt) where T : unmanaged
+        private static unsafe bool PeekTier1(byte* ptr, out HsmEvent evt)
         {
-            byte* ptr = (byte*)instance;
             ref byte count = ref ptr[Tier1_EventCount_Offset];
             
             if (count > 0)
@@ -181,9 +229,8 @@ namespace Fhsm.Kernel
 
         // --- Tier 2/3 Implementation (Generic with offsets) ---
         // Note: Used for both Tier 2 and Tier 3 just changing offsets/cap
-        private static unsafe bool EnqueueTier2<T>(T* instance, in HsmEvent evt, int intSlotUsedOffset, int eventCountOffset, int bufferOffset, int ringOffset, int ringCapacity) where T : unmanaged
+        private static unsafe bool EnqueueTier2(byte* ptr, in HsmEvent evt, int intSlotUsedOffset, int eventCountOffset, int bufferOffset, int ringOffset, int ringCapacity)
         {
-            byte* ptr = (byte*)instance;
             ref byte intSlotUsed = ref ptr[intSlotUsedOffset];
             ref byte ringCount = ref ptr[eventCountOffset]; // Count of items in RING
             
@@ -204,7 +251,7 @@ namespace Fhsm.Kernel
                 // Normal/Low -> Shared Ring
                 if (ringCount < ringCapacity)
                 {
-                    InstanceHeader* header = (InstanceHeader*)instance;
+                    InstanceHeader* header = (InstanceHeader*)ptr;
                     byte* ringStart = ptr + ringOffset;
                     
                     // tail index
@@ -220,9 +267,8 @@ namespace Fhsm.Kernel
             }
         }
 
-        private static unsafe bool DequeueTier2<T>(T* instance, out HsmEvent evt, int intSlotUsedOffset, int eventCountOffset, int bufferOffset, int ringOffset, int ringCapacity) where T : unmanaged
+        private static unsafe bool DequeueTier2(byte* ptr, out HsmEvent evt, int intSlotUsedOffset, int eventCountOffset, int bufferOffset, int ringOffset, int ringCapacity)
         {
-            byte* ptr = (byte*)instance;
             ref byte intSlotUsed = ref ptr[intSlotUsedOffset];
             
             // 1. Check Interrupt Slot
@@ -238,7 +284,7 @@ namespace Fhsm.Kernel
             ref byte ringCount = ref ptr[eventCountOffset];
             if (ringCount > 0)
             {
-                InstanceHeader* header = (InstanceHeader*)instance;
+                InstanceHeader* header = (InstanceHeader*)ptr;
                 byte* ringStart = ptr + ringOffset;
                 
                 int head = header->QueueHead;
@@ -254,9 +300,8 @@ namespace Fhsm.Kernel
             return false;
         }
 
-         private static unsafe bool PeekTier2<T>(T* instance, out HsmEvent evt, int intSlotUsedOffset, int eventCountOffset, int bufferOffset, int ringOffset, int ringCapacity) where T : unmanaged
+         private static unsafe bool PeekTier2(byte* ptr, out HsmEvent evt, int intSlotUsedOffset, int eventCountOffset, int bufferOffset, int ringOffset, int ringCapacity)
         {
-            byte* ptr = (byte*)instance;
             ref byte intSlotUsed = ref ptr[intSlotUsedOffset];
             
             // 1. Check Interrupt Slot
@@ -271,7 +316,7 @@ namespace Fhsm.Kernel
             ref byte ringCount = ref ptr[eventCountOffset];
             if (ringCount > 0)
             {
-                InstanceHeader* header = (InstanceHeader*)instance;
+                InstanceHeader* header = (InstanceHeader*)ptr;
                 byte* ringStart = ptr + ringOffset;
                 
                 int head = header->QueueHead;
