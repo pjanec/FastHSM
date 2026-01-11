@@ -17,6 +17,16 @@ namespace Fhsm.Kernel
         private const int CurrentEventId_Offset_128 = 58;
         private const int CurrentEventId_Offset_256 = 98;
 
+        // Internal struct for LCA path
+        private struct TransitionPath
+        {
+            public ushort LCA;
+            public ushort ExitCount;  // Number of states to exit
+            public ushort EntryCount; // Number of states to enter
+            public fixed ushort ExitPath[16];  // Max depth 16
+            public fixed ushort EntryPath[16];
+        }
+
         /// <summary>
         /// Process instances through one tick.
         /// </summary>
@@ -205,8 +215,11 @@ namespace Fhsm.Kernel
             InstanceHeader* header = (InstanceHeader*)instancePtr;
             ushort* activeLeafIds = GetActiveLeafIds(instancePtr, instanceSize, out int regionCount);
             
-            for (int iteration = 0; iteration < MaxRTCIterations; iteration++)
+            int iteration = 0;
+            while (iteration < MaxRTCIterations)
             {
+                iteration++;
+
                 TransitionDef? selectedTransition = SelectTransition(
                     definition,
                     instancePtr,
@@ -222,7 +235,10 @@ namespace Fhsm.Kernel
                     break;
                 }
                 
-                ExecuteTransitionStub(definition, instancePtr, instanceSize, selectedTransition.Value, activeLeafIds, regionCount);
+                ExecuteTransition(definition, instancePtr, instanceSize, selectedTransition.Value, activeLeafIds, regionCount, contextPtr);
+                
+                // Break after one transition per event (Standard Run-to-Completion step)
+                break;
             }
             
             // Advance to Activity
@@ -309,19 +325,222 @@ namespace Fhsm.Kernel
         
         private static bool EvaluateGuard(ushort guardId, byte* instancePtr, void* contextPtr, ushort eventId)
         {
-            return true;
+            return HsmActionDispatcher.EvaluateGuard(guardId, instancePtr, contextPtr, eventId);
         }
 
-        private static void ExecuteTransitionStub(
+        // --- Transition Execution Logic (BATCH-10) ---
+
+        private static void ExecuteTransition(
             HsmDefinitionBlob definition,
             byte* instancePtr,
             int instanceSize,
             TransitionDef transition,
             ushort* activeLeafIds,
-            int regionCount)
+            int regionCount,
+            void* contextPtr)
         {
-             // Simple stub: update first region to target
-             activeLeafIds[0] = transition.TargetStateIndex;
+            ushort sourceStateId = transition.SourceStateIndex;
+            ushort targetStateId = transition.TargetStateIndex;
+            
+            // Compute LCA path
+            TransitionPath path = ComputeLCA(definition, sourceStateId, targetStateId);
+            
+            // 1. Execute exit actions (leaf -> LCA)
+            for (int i = 0; i < path.ExitCount; i++)
+            {
+                ushort stateId = path.ExitPath[i];
+                ref readonly var state = ref definition.GetState(stateId);
+                
+                if (state.OnExitActionId != 0 && state.OnExitActionId != 0xFFFF)
+                {
+                    ExecuteAction(state.OnExitActionId, instancePtr, contextPtr, transition.EventId);
+                }
+                
+                // Save history if this state has history
+                if ((state.Flags & StateFlags.IsHistory) != 0 || state.HistorySlotIndex != 0xFFFF)
+                {
+                    SaveHistory(instancePtr, instanceSize, stateId, activeLeafIds[0]);
+                }
+            }
+            
+            // 2. Execute transition action
+            if (transition.ActionId != 0 && transition.ActionId != 0xFFFF)
+            {
+                ExecuteAction(transition.ActionId, instancePtr, contextPtr, transition.EventId);
+            }
+            
+            // 3. Execute entry actions (LCA -> leaf)
+            ushort finalLeafId = targetStateId;
+            
+            for (int i = 0; i < path.EntryCount; i++)
+            {
+                ushort stateId = path.EntryPath[i];
+                ref readonly var state = ref definition.GetState(stateId);
+                
+                // Check if history state
+                if ((state.Flags & StateFlags.IsHistory) != 0)
+                {
+                    // Restore history
+                    ushort restoredLeaf = RestoreHistory(instancePtr, instanceSize, stateId);
+                    if (restoredLeaf != 0xFFFF)
+                    {
+                        finalLeafId = restoredLeaf;
+                        break; 
+                    }
+                }
+                
+                if (state.OnEntryActionId != 0 && state.OnEntryActionId != 0xFFFF)
+                {
+                    ExecuteAction(state.OnEntryActionId, instancePtr, contextPtr, transition.EventId);
+                }
+                
+                // If composite, resolve to initial child
+                if ((state.Flags & StateFlags.IsComposite) != 0)
+                {
+                    ushort initialChild = state.FirstChildIndex;
+                    if (initialChild != 0xFFFF)
+                    {
+                        finalLeafId = initialChild;
+                    }
+                }
+            }
+            
+            // 4. Update active state
+            activeLeafIds[0] = finalLeafId;
+        }
+
+        private static void ExecuteAction(
+            ushort actionId,
+            byte* instancePtr,
+            void* contextPtr,
+            ushort eventId)
+        {
+            HsmActionDispatcher.ExecuteAction(actionId, instancePtr, contextPtr, eventId);
+        }
+
+        private static TransitionPath ComputeLCA(
+            HsmDefinitionBlob definition,
+            ushort sourceStateId,
+            ushort targetStateId)
+        {
+            var path = new TransitionPath();
+            
+            if (sourceStateId == targetStateId)
+            {
+                path.LCA = sourceStateId;
+                path.ExitCount = 0;
+                path.EntryCount = 0;
+                return path;
+            }
+            
+            ushort* sourceChain = stackalloc ushort[16];
+            ushort* targetChain = stackalloc ushort[16];
+            
+            int sourceDepth = BuildAncestorChain(definition, sourceStateId, sourceChain);
+            int targetDepth = BuildAncestorChain(definition, targetStateId, targetChain);
+            
+            ushort lca = 0xFFFF;
+            int commonDepth = 0;
+            
+            int minDepth = sourceDepth < targetDepth ? sourceDepth : targetDepth;
+            for (int i = 0; i < minDepth; i++)
+            {
+                if (sourceChain[i] == targetChain[i])
+                {
+                    lca = sourceChain[i];
+                    commonDepth = i + 1;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            
+            path.LCA = lca;
+            
+            path.ExitCount = (ushort)(sourceDepth - commonDepth);
+            for (int i = 0; i < path.ExitCount; i++)
+            {
+                path.ExitPath[i] = sourceChain[sourceDepth - 1 - i];
+            }
+            
+            path.EntryCount = (ushort)(targetDepth - commonDepth);
+            for (int i = 0; i < path.EntryCount; i++)
+            {
+                path.EntryPath[i] = targetChain[commonDepth + i];
+            }
+            
+            return path;
+        }
+
+        private static int BuildAncestorChain(
+            HsmDefinitionBlob definition,
+            ushort stateId,
+            ushort* chain)
+        {
+            int depth = 0;
+            ushort current = stateId;
+            ushort* tempChain = stackalloc ushort[16];
+            
+            while (current != 0xFFFF && depth < 16)
+            {
+                tempChain[depth++] = current;
+                ref readonly var state = ref definition.GetState(current);
+                current = state.ParentIndex;
+            }
+            
+            for (int i = 0; i < depth; i++)
+            {
+                chain[i] = tempChain[depth - 1 - i];
+            }
+            
+            return depth;
+        }
+
+        private static void SaveHistory(
+            byte* instancePtr,
+            int instanceSize,
+            ushort compositeStateId,
+            ushort activeLeafId)
+        {
+            ushort* historySlots = GetHistorySlots(instancePtr, instanceSize, out int slotCount);
+            if (historySlots == null) return;
+            
+            int slotIndex = compositeStateId % slotCount;
+            
+            if (slotIndex < slotCount)
+            {
+                historySlots[slotIndex] = activeLeafId;
+            }
+        }
+
+        private static ushort RestoreHistory(
+            byte* instancePtr,
+            int instanceSize,
+            ushort historyStateId)
+        {
+            ushort* historySlots = GetHistorySlots(instancePtr, instanceSize, out int slotCount);
+            if (historySlots == null) return 0xFFFF;
+            
+            int slotIndex = historyStateId % slotCount;
+            
+            if (slotIndex < slotCount)
+            {
+                return historySlots[slotIndex];
+            }
+            
+            return 0xFFFF;
+        }
+
+        private static ushort* GetHistorySlots(byte* instancePtr, int instanceSize, out int count)
+        {
+            switch (instanceSize)
+            {
+                case 64: count = 2; return (ushort*)(instancePtr + 32);
+                case 128: count = 8; return (ushort*)(instancePtr + 40);
+                case 256: count = 16; return (ushort*)(instancePtr + 64);
+                default: count = 0; return null;
+            }
         }
 
         // --- Helpers ---

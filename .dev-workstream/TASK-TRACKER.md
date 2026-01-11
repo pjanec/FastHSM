@@ -32,12 +32,17 @@
 ## Phase K: Kernel 🟡 IN PROGRESS
 
 - [x] **TASK-K01** Kernel Entry Point (Architect Q9) → [details](TASK-DEFINITIONS.md#task-k01-kernel-entry-point)
-- [ ] **TASK-K02** Timer Decrement → [details](TASK-DEFINITIONS.md#task-k02-timer-decrement) *BATCH-09*
-- [ ] **TASK-K03** Event Processing → [details](TASK-DEFINITIONS.md#task-k03-event-processing) *BATCH-09*
-- [ ] **TASK-K04** RTC Loop (Architect Q4) → [details](TASK-DEFINITIONS.md#task-k04-rtc-loop) *BATCH-09*
-- [ ] **TASK-K05** LCA Algorithm → [details](TASK-DEFINITIONS.md#task-k05-lca-algorithm)
-- [ ] **TASK-K06** Transition Execution (Architect Q3) → [details](TASK-DEFINITIONS.md#task-k06-transition-execution)
+- [x] **TASK-K02** Timer Decrement → [details](TASK-DEFINITIONS.md#task-k02-timer-decrement)
+- [x] **TASK-K03** Event Processing → [details](TASK-DEFINITIONS.md#task-k03-event-processing)
+- [x] **TASK-K04** RTC Loop (Architect Q4) → [details](TASK-DEFINITIONS.md#task-k04-rtc-loop)
+- [x] **TASK-K05** LCA Algorithm → [details](TASK-DEFINITIONS.md#task-k05-lca-algorithm)
+- [x] **TASK-K06** Transition Execution (Architect Q3) → [details](TASK-DEFINITIONS.md#task-k06-transition-execution)
 - [ ] **TASK-K07** Activity Execution → [details](TASK-DEFINITIONS.md#task-k07-activity-execution)
+
+## Phase SG: Source Generation 🟡 IN PROGRESS
+
+- [ ] **TASK-SG01** Source Generator Setup → [details](TASK-DEFINITIONS.md#task-sg01-source-generator-setup) *BATCH-11*
+- [ ] **TASK-SG02** Action/Guard Binding (Architect Q8, Q9) → [details](TASK-DEFINITIONS.md#task-sg02-action-guard-binding) *BATCH-11*
 
 ## Phase T: Tooling
 
@@ -53,12 +58,12 @@
 
 ## Progress Summary
 
-**Completed:** 17 tasks  
-**In Progress:** 3 tasks (BATCH-09: K02, K03, K04)  
+**Completed:** 21 tasks  
+**In Progress:** 2 tasks (BATCH-11: SG01, SG02)  
 **Needs Fixes:** 3 tasks (D10, D11, D12)  
-**Remaining:** 7 tasks
+**Remaining:** 4 tasks
 
-**Current:** BATCH-09 (substantial - 3 kernel tasks combined)
+**Current:** BATCH-11 (Source Generation & Action Dispatch)
 
 ---
 

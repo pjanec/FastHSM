@@ -20,8 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Fhsm.Kernel\Fhsm.Kernel.csproj" />
+    <ProjectReference Include="..\..\src\Fhsm.Kernel\Fhsm.Kernel.csproj" Aliases="global,KernelLib" />
     <ProjectReference Include="..\..\src\Fhsm.Compiler\Fhsm.Compiler.csproj" />
+    <ProjectReference Include="..\..\src\Fhsm.SourceGen\Fhsm.SourceGen.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>
