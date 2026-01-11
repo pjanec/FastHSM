@@ -25,12 +25,11 @@ You are the **Development Lead** managing implementation work through a structur
 ## 📋 Folder Structure Overview
 
 ```
-
 .dev-workstream/
 ├── README.md                      # Developer workflow guide (generic)
 ├── DEV-LEAD-GUIDE.md             # This file (your guide)
-├── TASK-TRACKER.md               # Master progress tracker (you maintain)
-├── TASK-DEFINITIONS.md           # Brief defs of all taks (you create), hevily referencing the design docs
+├── TASK-TRACKER.md               # Brief checklist with task IDs (you maintain)
+├── TASK-DEFINITIONS.md           # Detailed task definitions with unique IDs
 │
 ├── templates/                     # Reusable templates
 │   ├── BATCH-REPORT-TEMPLATE.md
@@ -56,9 +55,46 @@ You are the **Development Lead** managing implementation work through a structur
     └── ...
 ```
 
+### Task Tracking System
+
+**Two-Document Approach:**
+
+1. **TASK-DEFINITIONS.md** - Detailed task specifications
+   - Each task has unique ID (e.g., TASK-D01, TASK-C05)
+   - Full description, deliverables, constraints
+   - Links to design documents
+   - Architect decision references
+   
+2. **TASK-TRACKER.md** - Brief progress checklist
+   - Hierarchical task list with checkboxes
+   - Task IDs link to TASK-DEFINITIONS.md
+   - Quick status overview
+   
+**Workflow:**
+```
+TASK-DEFINITIONS.md → Design docs → TASK-TRACKER.md → BATCH-XX-INSTRUCTIONS.md
+```
+
+**Why:** Task definitions are stable (what needs to be done). Batches are dynamic (how you group work based on developer performance).
+
 ---
 
 ## 📝 Writing Batch Instructions
+
+### Critical Rule: Reference Task IDs
+
+**Each batch MUST identify which tasks it completes:**
+
+```markdown
+# BATCH-XX: [Feature Name]
+
+**Batch Number:** BATCH-XX  
+**Tasks:** TASK-C06 (Flattener), TASK-C07 (Emitter), TASK-D09 (fix)  
+**Phase:** [Phase Name]  
+**Estimated Effort:** [hours]
+```
+
+**Why:** Tasks are stable (what needs building). Batches are dynamic (how you group work). Future you can see exactly which tasks this batch covered.
 
 ### Critical Rule: Complete Onboarding in Every Batch
 
@@ -72,9 +108,10 @@ You are the **Development Lead** managing implementation work through a structur
 
 ### Required Reading (IN ORDER)
 1. **Workflow Guide:** `.dev-workstream/README.md` - How to work with batches
-2. **Design Document:** `docs/[relevant-design-doc].md` - Technical specifications
-3. **Previous Review:** `.dev-workstream/reviews/BATCH-XX-REVIEW.md` - Learn from feedback
-4. [Additional project-specific documents]
+2. **Task Definitions:** `.dev-workstream/TASK-DEFINITIONS.md` - See TASK-XX details
+3. **Design Document:** `docs/[relevant-design-doc].md` - Technical specifications
+4. **Previous Review:** `.dev-workstream/reviews/BATCH-XX-REVIEW.md` - Learn from feedback
+5. [Additional project-specific documents]
 
 ### Source Code Location
 - **Primary Work Area:** `[path-to-main-code]`
@@ -98,6 +135,7 @@ Every batch instruction file should follow this structure:
 # BATCH-XX: [Feature Name]
 
 **Batch Number:** BATCH-XX  
+**Tasks:** TASK-ID1, TASK-ID2, TASK-ID3 (list which tasks this batch completes)  
 **Phase:** [Phase Name]  
 **Estimated Effort:** [hours]  
 **Priority:** [HIGH/MEDIUM/LOW]  
@@ -110,6 +148,16 @@ Every batch instruction file should follow this structure:
 
 ---
 
+## Context
+
+[Brief context explaining how this batch fits into the larger picture]
+
+**Related Tasks:**
+- [TASK-ID1](../TASK-DEFINITIONS.md#task-id1-name) - What it covers
+- [TASK-ID2](../TASK-DEFINITIONS.md#task-id2-name) - What it covers
+
+---
+
 ## 🎯 Batch Objectives
 [What this batch accomplishes, why it matters]
 
@@ -117,13 +165,16 @@ Every batch instruction file should follow this structure:
 
 ## ✅ Tasks
 
-### Task 1: [Task Name]
-**File:** `[path/to/file]` (NEW FILE / UPDATE / REFACTOR)
+### Task 1: [Task Name] (TASK-ID1)
+
+**File:** `[path/to/file]` (NEW FILE / UPDATE / REFACTOR)  
+**Task Definition:** See [TASK-DEFINITIONS.md](../TASK-DEFINITIONS.md#task-id1-name)
+
 **Description:** [What needs to be done]
 **Requirements:**
 [Detailed specifications, code examples, edge cases]
 
-**Reference:** [Link to design doc section]
+**Design Reference:** [Link to design doc section]
 
 **Tests Required:**
 - ✅ [Specific test scenario 1]
@@ -142,16 +193,15 @@ Every batch instruction file should follow this structure:
 ## 📊 Report Requirements
 [What developer must document in their report]
 
-### Specific Questions You MUST Answer
-1. [Question about design decision]
-2. [Question about challenges]
-3. [Question about integration]
-[These ensure thoughtful reporting]
-
 ---
 
 ## 🎯 Success Criteria
-[Checklist of what "done" means for this batch]
+
+This batch is DONE when:
+- [ ] TASK-ID1 completed (specific criteria)
+- [ ] TASK-ID2 completed (specific criteria)
+- [ ] All tests passing
+- [ ] Report submitted
 
 ---
 
@@ -161,7 +211,9 @@ Every batch instruction file should follow this structure:
 ---
 
 ## 📚 Reference Materials
-[Links to docs, existing code to study, examples]
+- **Task Defs:** [TASK-DEFINITIONS.md](../TASK-DEFINITIONS.md) - See TASK-ID1, TASK-ID2
+- **Design:** `docs/[design-doc].md` - Section X.Y
+- [Additional refs]
 ```
 
 ### Rules for Writing Good Batch Instructions
@@ -406,6 +458,14 @@ Create: `.dev-workstream/reviews/BATCH-XX-REVIEW.md`
 
 ---
 
+## Tasks Completed
+
+- ✅ TASK-ID1: [Task Name]
+- ✅ TASK-ID2: [Task Name]
+- ⚠️ TASK-ID3: [Task Name] (needs fixes)
+
+---
+
 ## Overall Assessment
 
 [2-3 sentence summary of batch quality]
@@ -634,19 +694,24 @@ This batch is DONE when:
 Update TASK-TRACKER.md:
 
 ```markdown
-| 12   | Network-ELM Foundation | 4-6  | 🟢 Complete* | 2026-01-10 | 2026-01-11 | 1 day |
-| 12.1 | Foundation Corrections | 2    | 🟡 In Progress | 2026-01-11 | -         | -     |
+## Phase X: [Phase Name]
 
-*Corrections required - see BATCH-12.1
+- [x] **TASK-X01** [Task Name] → [details](TASK-DEFINITIONS.md#task-x01)
+- [⚠️] **TASK-X02** [Task Name] → [details](TASK-DEFINITIONS.md#task-x02) *needs fixes from BATCH-12.1*
+- [ ] **TASK-X03** [Task Name] → [details](TASK-DEFINITIONS.md#task-x03)
 ```
 
-Keep TASK-TRACKER.md brief with references to TASK-DEFINITIONS.
+**Key Points:**
+- Keep TASK-TRACKER.md brief (hierarchical checklist)
+- Use task IDs consistently (TASK-D01, TASK-C05, etc.)
+- Link to TASK-DEFINITIONS.md for details
+- Tasks are atomic units; batches group them dynamically
 
-The workflow is:
-  * TASK-DEFINITIONS.md → Understand what needs to be built
-  * Design docs → Understand how it should work
-  * TASK-TRACKER.md → Check status
-  * BATCH-XX-INSTRUCTIONS.md → Get specific implementation tasks
+**The workflow is:**
+1. **TASK-DEFINITIONS.md** → Understand what needs to be built (stable definitions)
+2. **Design docs** → Understand how it should work (technical specs)
+3. **TASK-TRACKER.md** → Check status (quick overview)
+4. **BATCH-XX-INSTRUCTIONS.md** → Get specific implementation tasks (dynamic grouping)
 ---
 
 ## 📝 Git Commit Message Generation
@@ -670,13 +735,15 @@ After batch approval, create a commit message in your review or as a separate co
 ```
 [type]: [Brief summary] (BATCH-XX)
 
+Completes TASK-ID1, TASK-ID2, TASK-ID3
+
 [Detailed description of changes]
 
 [Component sections]
 
 [Testing section]
 
-[Related references]
+Related: TASK-DEFINITIONS.md, docs/design/[design-doc].md
 ```
 
 **Commit Types:**
@@ -691,38 +758,37 @@ After batch approval, create a commit message in your review or as a separate co
 **Example: Feature Batch**
 
 ```
-feat: Add Network-ELM integration foundation layer (BATCH-12)
+feat: compiler flattener & emitter (BATCH-07)
 
-Implements foundational infrastructure for Network-ELM integration to support
-distributed entity lifecycle management and partial ownership.
+Completes TASK-C06 (Flattener), TASK-C07 (Emitter), TASK-D09 (Blob fix)
 
-New Components:
-- NetworkConstants: Centralized descriptor IDs, message IDs, and timeouts
-- MasterFlags enum: ReliableInit flag for distributed construction coordination
-- NetworkSpawnRequest: Transient component for entity spawner system
-- PendingNetworkAck: Tag for entities awaiting network acknowledgment
-- ForceNetworkPublish: Tag for immediate descriptor publication
-- DescriptorAuthorityChanged event: Ownership change notifications
+Converts normalized graph to flat ROM arrays and emits HsmDefinitionBlob.
 
-New Interfaces:
-- IOwnershipDistributionStrategy: Strategy pattern for partial ownership assignment
-- INetworkTopology: Abstraction for peer discovery and topology management
-- ITkbDatabase: TKB template access without concrete dependencies
+HsmFlattener (TASK-C06):
+- BFS-ordered state flattening (cache locality)
+- Hierarchy preserved (ParentIndex, FirstChildIndex, NextSiblingIndex)
+- Transition flattening with LCA cost computation (Architect Q6)
+- Dispatch table building (ActionIds[], GuardIds[] sorted deterministically)
+- Global transitions separated (Architect Q7)
 
-New Messages:
-- EntityLifecycleStatusDescriptor: Reliable init ACK protocol support
+HsmEmitter (TASK-C07):
+- Header population (magic, counts, format version)
+- StructureHash: topology only (stable across renames)
+- ParameterHash: logic changes (actions, guards, events)
+- Blob instantiation from flat arrays
 
-Utilities:
-- OwnershipExtensions.PackKey/UnpackKey: Composite key packing for (TypeId, InstanceId)
-- DefaultOwnershipStrategy: Default implementation (all descriptors to master)
+HsmDefinitionBlob Fix (TASK-D09):
+- Made sealed (prevent inheritance)
+- Arrays now private readonly
+- Expose only ReadOnlySpan<T> accessors
+- Added ActionIds[], GuardIds[] dispatch tables
 
 Testing:
-- 17 unit tests covering all new components and logic
-- Fixed async/await patterns in ModuleCircuitBreakerTests and SnapshotPoolTests
+- 20 tests covering flattening, emission, hash stability
+- StructureHash stable across state renames (verified)
+- ParameterHash changes when logic changes (verified)
 
-This batch establishes the foundation for BATCH-13 (translators and spawner system).
-
-Related: docs/[design-doc-name].md
+Related: TASK-DEFINITIONS.md, Architect Q6 (structural cost), Q7 (global table)
 ```
 
 **Example: Corrective Batch**
@@ -762,56 +828,90 @@ When you commit this batch, use the following message:
 
 ---
 
-## 📊 Maintaining the Task Tracker
+## 📊 Maintaining the Task Tracking System
 
-### Your Responsibility
+### Two Files You Maintain
 
-Keep `.dev-workstream/TASK-TRACKER.md` up to date after each batch milestone.
+#### 1. TASK-DEFINITIONS.md (Stable, Updated Rarely)
 
-### Tracker Structure
+**Purpose:** Atomic task definitions with unique IDs  
+**Update When:**
+- New feature requires new tasks
+- Requirements change fundamentally
+- Architect decisions modify existing tasks
 
+**Structure:**
 ```markdown
-# Project Task Tracker
+## Phase X: [Phase Name]
 
-## Status Legend
-- 🟢 Complete
-- 🟡 In Progress
-- 🔴 Blocked
-- ⚪ Not Started
-- ⏸️ Deferred
+### TASK-X01: [Task Name]
+**Status:** ✅ DONE / ⚠️ PARTIAL / ⚪ TODO  
+**Deliverable:** [What this task produces]  
+**Design Ref:** [Link to design doc section]
 
-## Task Overview
-
-| # | Task Name | Est. Days | Status | Started | Completed | Actual |
-|---|-----------|-----------|--------|---------|-----------|--------|
-| 01 | [Feature Name] | 2 | 🟢 Complete | 2026-01-10 | 2026-01-11 | 1 day |
-| 02 | [Feature Name] | 3 | 🟡 In Progress | 2026-01-12 | - | - |
-| 03 | [Feature Name] | 4 | ⚪ Not Started | - | - | - |
-
-## Detailed Status
-
-### BATCH-01: [Feature Name] 🟢
-**Status:** Complete  
-**Developer:** [Name]  
-**Files:** `.dev-workstream/batches/BATCH-01-INSTRUCTIONS.md`  
-**Report:** `.dev-workstream/reports/BATCH-01-REPORT.md`  
-**Review:** `.dev-workstream/reviews/BATCH-01-REVIEW.md`  
-**Commit:** [commit hash if available]
+**Scope:** [What this task covers]
+**Constraints:** [Critical rules]
+**Current Issues:** [If partial/needs fixes]
 ```
+
+**Key Points:**
+- Each task has unique ID (TASK-D01, TASK-C05, etc.)
+- Tasks are atomic units of work
+- Heavy referencing to design documents
+- Stable over time
+
+#### 2. TASK-TRACKER.md (Dynamic, Updated Frequently)
+
+**Purpose:** Brief hierarchical checklist  
+**Update When:**
+- After each batch review
+- When priorities change
+- When new batches created
+
+**Structure:**
+```markdown
+# Task Tracker
+
+**See:** [TASK-DEFINITIONS.md](TASK-DEFINITIONS.md) for details.
+
+## Phase D: Data Layer
+
+- [x] **TASK-D01** ROM Enumerations → [details](TASK-DEFINITIONS.md#task-d01)
+- [x] **TASK-D02** ROM State Definition → [details](TASK-DEFINITIONS.md#task-d02)
+- [⚠️] **TASK-D09** Blob Container → [details](TASK-DEFINITIONS.md#task-d09) *needs fixes*
+- [ ] **TASK-D10** Instance Manager → [details](TASK-DEFINITIONS.md#task-d10)
+
+## Phase C: Compiler
+
+- [x] **TASK-C01** Graph Nodes → [details](TASK-DEFINITIONS.md#task-c01)
+- [ ] **TASK-C06** Flattener → [details](TASK-DEFINITIONS.md#task-c06)
+
+**Progress:** 5 done, 1 needs fixes, 10 remaining
+```
+
+**Key Points:**
+- Keep brief (single line per task)
+- Use checkboxes for status
+- Link to TASK-DEFINITIONS.md for details
+- Quick status overview
 
 ### When to Update
 
-1. **Batch Assigned:** Status → 🟡 In Progress, add Started date
-2. **Batch Completed:** Status → 🟢 Complete, add Completed date and Actual days
-3. **Batch Blocked:** Status → 🔴 Blocked, add notes in Detailed Status
-4. **Batch Deferred:** Status → ⏸️ Deferred, explain why
+#### TASK-DEFINITIONS.md (Rare):
+- New feature added → Add new task definitions
+- Architect decision changes scope → Update task constraints
+- Discovery during implementation → Add "Current Issues" section
+
+#### TASK-TRACKER.md (Frequent):
+- **After batch approval:** Mark completed task IDs as done
+- **After batch review:** Add ⚠️ if needs fixes
+- **When starting batch:** No change (tasks are atomic, not batch-based)
+- **Progress summary:** Update counts at bottom
 
 ### Update Frequency
 
-- **After each batch review** (approved or requiring changes)
-- **When priorities change**
-- **When new batches are created**
-- **Weekly summary** (snapshot of overall progress)
+- **TASK-DEFINITIONS.md:** As needed (requirements change)
+- **TASK-TRACKER.md:** After each batch review
 
 ---
 
@@ -819,11 +919,13 @@ Keep `.dev-workstream/TASK-TRACKER.md` up to date after each batch milestone.
 
 ### Phase 1: Planning & Assignment
 
-1. **Break down feature** into batches (4-10 hours each)
-2. **Write batch instructions** following structure above
-3. **Include complete onboarding** (different developer may work on it)
-4. **Update task tracker** (new batch added)
-5. **Assign to developer** (point to instruction file)
+1. **Define tasks** (if new feature, update TASK-DEFINITIONS.md)
+2. **Group tasks into batch** (4-10 hours, 1-3 task IDs per batch)
+3. **Write batch instructions** (reference task IDs, include onboarding)
+4. **Update task tracker** (mark relevant task IDs as in-progress)
+5. **Assign to developer** (point to batch instruction file)
+
+**Key:** You decide which tasks to group into each batch based on developer performance, dependencies, and pragmatism. Tasks are stable; batches are dynamic.
 
 ### Phase 2: Development (Developer Works)
 
@@ -848,10 +950,11 @@ Keep `.dev-workstream/TASK-TRACKER.md` up to date after each batch milestone.
 ### Phase 4: Decision
 
 #### If APPROVED:
-1. **Write review** with approval
-2. **Generate git commit message** (don't run git commit!)
-3. **Update task tracker** (mark complete)
-4. **Prepare next batch** or celebrate completion
+1. **Write review** with approval (list completed task IDs)
+2. **Generate git commit message** (include task IDs, don't run git commit!)
+3. **Update TASK-TRACKER.md** (mark completed task IDs as done)
+4. **Update TASK-DEFINITIONS.md** (if issues found, add to "Current Issues")
+5. **Prepare next batch** or celebrate completion
 
 #### If CHANGES REQUIRED (Minor):
 1. **Write review** with specific changes
@@ -860,10 +963,11 @@ Keep `.dev-workstream/TASK-TRACKER.md` up to date after each batch milestone.
 4. **Approve** and continue
 
 #### If SERIOUS ISSUES (Need Corrective Batch):
-1. **Write review** documenting issues
-2. **Create BATCH-XX.1-INSTRUCTIONS.md**
-3. **Assign corrective batch** to developer
-4. **Update task tracker**
+1. **Write review** documenting issues (list affected task IDs)
+2. **Update TASK-DEFINITIONS.md** (add issues to affected tasks)
+3. **Update TASK-TRACKER.md** (mark affected tasks as ⚠️ needs fixes)
+4. **Create BATCH-XX.1-INSTRUCTIONS.md** (reference affected task IDs)
+5. **Assign corrective batch** to developer
 
 ---
 
@@ -997,11 +1101,12 @@ Copy this for each review:
 ### File Locations
 
 ```
+Task Defs:    .dev-workstream/TASK-DEFINITIONS.md  (atomic task specs)
+Tracker:      .dev-workstream/TASK-TRACKER.md      (brief checklist)
 Instruction:  .dev-workstream/batches/BATCH-XX-INSTRUCTIONS.md
 Report:       .dev-workstream/reports/BATCH-XX-REPORT.md
 Questions:    .dev-workstream/questions/BATCH-XX-QUESTIONS.md  (if needed)
 Review:       .dev-workstream/reviews/BATCH-XX-REVIEW.md
-Tracker:      .dev-workstream/TASK-TRACKER.md
 ```
 
 ### Batch Numbering

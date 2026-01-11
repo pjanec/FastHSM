@@ -31,6 +31,7 @@ namespace Fhsm.Compiler.Graph
         
         // Computed during flattening
         public ushort FlatIndex { get; set; } = 0xFFFF;
+        public ushort HistorySlotIndex { get; set; } = 0xFFFF;  // 0xFFFF = no history
         public byte Depth { get; set; }
         
         public StateNode(string name, Guid? stableId = null)

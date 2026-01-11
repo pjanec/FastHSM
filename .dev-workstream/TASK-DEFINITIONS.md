@@ -1,710 +1,580 @@
 # FastHSM Implementation - Task Definitions
 
-**Purpose:** Complete implementation plan with scope, deliverables, and design references.  
-**For:** Future developers, code reviewers, project managers.
+**Purpose:** Atomic task definitions with unique IDs for tracking and reference.  
+**Usage:** Batches reference these task IDs. Tracker marks IDs as done.
 
 ---
 
-## Architecture Overview
+## Task ID Format
 
-FastHSM is a **high-performance Hierarchical State Machine library** designed for ECS game engines. It follows a "bytecode interpreter" pattern similar to FastBTree.
+`TASK-<phase><number>` where:
+- Phase: D=Data, C=Compiler, K=Kernel, T=Tooling, E=Examples
+- Number: Sequential within phase
 
-**Core Design Principles:**
-- **Data-Oriented Design:** Immutable ROM (definitions) + mutable RAM (instances)
-- **Zero-Allocation Runtime:** No GC pressure in hot path
-- **Cache-Friendly:** Fixed-size blittable structs (64B/128B/256B tiers)
-- **Deterministic Execution:** Reproducible across machines/builds
-- **ECS-Compatible:** Unmanaged components, batched updates, void* context
-
-**Architecture Layers:**
-1. **Data Layer:** ROM/RAM structs, memory layout
-2. **Compiler:** User API → flat bytecode blob
-3. **Kernel:** Tick execution, LCA transitions, RTC loop
-4. **Tooling:** Hot reload, debug tracing
-
-**Key References:**
-- `docs/design/HSM-design-talk.md` - Requirements & architecture decisions
-- `docs/design/HSM-Implementation-Design.md` - Detailed implementation spec
-- `docs/design/ARCHITECT-REVIEW-SUMMARY.md` - Critical fixes & directives
-- `docs/btree-design-inspiration/` - Design pattern inspiration
+Example: `TASK-D01`, `TASK-C03`, `TASK-K05`
 
 ---
 
-## Phase 1: Data Layer (5 days)
+## Architecture Context
 
-**Goal:** Define all ROM/RAM structures with exact byte layouts. Verify sizes, offsets, blittability.
+**Design Refs:**
+- `docs/design/HSM-design-talk.md` - Requirements
+- `docs/design/HSM-Implementation-Design.md` - Detailed spec
+- `docs/design/ARCHITECT-REVIEW-SUMMARY.md` - Critical decisions
+- `docs/btree-design-inspiration/` - Design patterns
 
-**Design Ref:** `HSM-Implementation-Design.md` Section 1 (Data Layer)
+**Core Principles:**
+- Data-Oriented Design (ROM/RAM separation)
+- Zero-Allocation Runtime
+- Cache-Friendly (64B/128B/256B tiers)
+- Deterministic Execution
+- ECS-Compatible
 
 ---
 
-### BATCH-01: ROM Data Structures (Core)
-**Effort:** 1.5 days → **Actual: 0.5 days** ✅
+## Phase D: Data Layer
+
+### TASK-D01: ROM Enumerations
+**Status:** ✅ DONE  
+**Deliverable:** `Enums.cs` with 5 enumerations  
+**Design Ref:** HSM-Implementation-Design.md §1.1
 
 **Scope:**
-Implement immutable definition structures (ROM) that will be stored in `HsmDefinitionBlob`.
+- StateFlags (16 flags)
+- TransitionFlags (16 flags, includes 4-bit priority)
+- EventPriority (Interrupt/Normal/Low)
+- InstancePhase (Idle/Entry/RTC/Activity)
+- InstanceFlags (8 flags)
 
-**Deliverables:**
-- `Enums.cs` - StateFlags, TransitionFlags, EventPriority, InstancePhase, InstanceFlags
-- `StateDef.cs` - 32-byte state definition
-- `TransitionDef.cs` - 16-byte transition definition
-- `RegionDef.cs` - 8-byte orthogonal region definition
-- `GlobalTransitionDef.cs` - 16-byte global transition (interrupts)
-- 20+ unit tests verifying sizes, offsets, flag manipulation
-
-**Critical Constraints:**
-- Exact sizes MUST match spec (cache line optimization)
-- `LayoutKind.Explicit` for deterministic layout
-- Blittable (no GC references)
-- `ushort` indices for 64K state/transition limit
-
-**Design Details:**
-- **StateDef (32B):** ParentIndex, FirstChildIndex, NextSiblingIndex, FirstTransitionIndex, Depth, Flags, ActionBindings (Entry/Exit/Activity/Timer), HistorySlotIndex, Reserved
-- **TransitionDef (16B):** SourceStateIndex, TargetStateIndex, EventId, GuardId, ActionId, Flags (includes 4-bit priority), Cost
-- **Architect Decision Q6:** Transition cost is structural-only (LCA distance)
-
-**Testing Focus:**
-- Size validation (Marshal.SizeOf)
-- Field offset verification (pointer arithmetic)
-- Flag extraction (priority from TransitionFlags)
-- Edge cases (max indices, max depth)
+**Constraints:**
+- Exact bit positions per spec
+- Priority extraction from TransitionFlags
+- Blittable types
 
 ---
 
-### BATCH-02: RAM Instance Structures
-**Effort:** 1.5 days → **Actual: 0.5 days** ✅
+### TASK-D02: ROM State Definition
+**Status:** ✅ DONE  
+**Deliverable:** `StateDef.cs` (32 bytes)  
+**Design Ref:** HSM-Implementation-Design.md §1.1
 
 **Scope:**
-Implement mutable per-instance state (RAM) with tier-specific memory layouts.
+- ParentIndex, FirstChildIndex, NextSiblingIndex
+- FirstTransitionIndex, TransitionCount
+- Depth, Flags
+- Action bindings (Entry/Exit/Activity/Timer)
+- HistorySlotIndex
 
-**Deliverables:**
-- `InstanceHeader.cs` - 16-byte common header (all tiers)
-- `HsmInstance64.cs` - 64-byte instance (Tier 1: Crowd)
-- `HsmInstance128.cs` - 128-byte instance (Tier 2: Standard)
-- `HsmInstance256.cs` - 256-byte instance (Tier 3: Complex)
-- 18+ unit tests verifying layouts, fixed arrays, event buffers
-
-**Critical Constraints:**
-- **ARCHITECT CRITICAL FIX (Q1):** Tier-specific event queue strategies
-  - **Tier 1 (64B):** Single shared queue (24B = 1 event). Interrupt overwrites oldest normal if full.
-  - **Tier 2 (128B):** Hybrid: 24B reserved slot for interrupt + 44B shared ring (1-2 events)
-  - **Tier 3 (256B):** Hybrid: 24B reserved slot for interrupt + 132B shared ring (5-6 events)
-
-**Design Details:**
-- **InstanceHeader (16B):** MachineId, Generation, Phase, Flags, RandomSeed, QueueHead/Tail, CurrentDepth
-- **Tier capacities:**
-  - Tier 1: 2 regions, 2 timers, 4 history slots, 24B event buffer
-  - Tier 2: 4 regions, 4 timers, 8 history slots, 68B event buffer
-  - Tier 3: 8 regions, 8 timers, 16 history slots, 156B event buffer
-
-**Testing Focus:**
-- Exact sizes (64/128/256 bytes)
-- Field offsets match spec
-- Fixed array access (`fixed ushort ActiveLeafIds[]`)
-- Event buffer capacities correct
-
-**Design Ref:** `ARCHITECT-REVIEW-SUMMARY.md` Q1 (Event Queue Fix)
+**Constraints:**
+- Exactly 32 bytes (cache line optimization)
+- LayoutKind.Explicit
+- ushort indices (64K limit)
 
 ---
 
-### BATCH-03: Event & Command Buffers
-**Effort:** 1 day → **Actual: 0.5 days** ✅
+### TASK-D03: ROM Transition Definition
+**Status:** ✅ DONE  
+**Deliverable:** `TransitionDef.cs` (16 bytes)  
+**Design Ref:** HSM-Implementation-Design.md §1.1, Arch Q6
 
 **Scope:**
-Implement I/O protocol structures for event queuing and command emission.
+- SourceStateIndex, TargetStateIndex
+- EventId, GuardId, ActionId
+- Flags (includes priority)
+- Cost (structural LCA distance)
 
-**Deliverables:**
-- `HsmEvent.cs` - 24-byte fixed-size event
-- `EventFlags` enum - IsDeferred, IsIndirect, IsConsumed
-- `CommandPage.cs` - 4096-byte command buffer page
-- `HsmCommandWriter.cs` - ref struct for zero-alloc command writing
-- 20+ unit tests verifying event payload, command writer overflow protection
-
-**Critical Constraints:**
-- **HsmEvent:** Fixed 24B (8B header + 16B payload). Larger data uses indirection (ID-only).
-- **CommandPage:** 4KB (OS page size, Architect Decision Q2)
-- **HsmCommandWriter:** `ref struct` (stack-only, prevents dangling pointers)
-
-**Design Details:**
-- **Event header:** EventId (ushort), Priority (byte), Flags (byte), Timestamp (uint)
-- **Payload:** 16-byte inline buffer. Larger data → store ID, set `IsIndirect` flag
-- **CommandPage:** 16B header (BytesUsed, PageIndex, NextPageOffset) + 4080B data area
-- **Writer:** TryWriteCommand returns false on overflow (no allocation, no exceptions)
-
-**Testing Focus:**
-- Event size exactly 24 bytes
-- Payload read/write (int, float, struct)
-- Command writer capacity tracking
-- Overflow protection works
-
-**Design Ref:** `HSM-Implementation-Design.md` Section 1.4 (Events & Commands)
+**Constraints:**
+- Exactly 16 bytes
+- Priority in flags (4 bits)
+- Cost is structural-only (Architect Q6)
 
 ---
 
-### BATCH-04: Definition Blob & Instance Management
-**Effort:** 1 day → **Actual: 2 days** ⚠️ CHANGES REQUIRED
+### TASK-D04: ROM Region & Global Transition
+**Status:** ✅ DONE  
+**Deliverable:** `RegionDef.cs` (8B), `GlobalTransitionDef.cs` (16B)  
+**Design Ref:** HSM-Implementation-Design.md §1.1, Arch Q7
 
 **Scope:**
-Complete data layer with ROM container, instance lifecycle, event queue operations, validation.
+- RegionDef: InitialStateIndex, StateCount
+- GlobalTransitionDef: Separate table for interrupts (Architect Q7)
 
-**Deliverables:**
-- `HsmDefinitionHeader.cs` - 32-byte blob header (magic, hashes, counts)
-- `HsmDefinitionBlob.cs` - ROM container with span accessors
-- `HsmInstanceManager.cs` - Initialize/Reset/SelectTier
-- `HsmEventQueue.cs` - Tier-specific enqueue/dequeue (implements Architect's fix)
-- `HsmValidator.cs` - Definition/instance validation
-- 30+ integration tests
+**Constraints:**
+- Fixed sizes
+- Global transitions in separate table
 
-**Critical Constraints:**
-- **Header:** Magic 0x4D534846 ('FHSM'), StructureHash (topology), ParameterHash (logic)
-- **Blob:** `sealed class`, arrays `private readonly`, expose `ReadOnlySpan<T>` for zero-alloc
-- **Event Queue:** MUST implement tier-specific strategies from Architect Q1
-- **Tier Selection:** Heuristics based on StateCount, MaxDepth, HistorySlots, RegionCount
+---
 
-**Design Details:**
-- **Tier Thresholds:**
-  - Tier 1 (64B): States ≤8, Depth ≤3, History ≤2, Regions ≤1
-  - Tier 2 (128B): States ≤32, Depth ≤6, History ≤4, Regions ≤2
-  - Tier 3 (256B): Everything else
-- **Event Queue Implementation:**
+### TASK-D05: RAM Instance Header
+**Status:** ✅ DONE  
+**Deliverable:** `InstanceHeader.cs` (16 bytes)  
+**Design Ref:** HSM-Implementation-Design.md §1.3
+
+**Scope:**
+- MachineId, Generation, Phase, Flags
+- RandomSeed (deterministic RNG)
+- QueueHead, ActiveTail, DeferredTail
+- CurrentDepth
+
+**Constraints:**
+- Exactly 16 bytes
+- Common to all tiers
+
+---
+
+### TASK-D06: RAM Instance Tiers
+**Status:** ✅ DONE  
+**Deliverable:** `HsmInstance64/128/256.cs`  
+**Design Ref:** HSM-Implementation-Design.md §1.3, Arch Q1
+
+**Scope:**
+- Tier 1 (64B): 2 regions, 2 timers, 4 history, 24B event buffer
+- Tier 2 (128B): 4 regions, 4 timers, 8 history, 68B event buffer
+- Tier 3 (256B): 8 regions, 8 timers, 16 history, 156B event buffer
+
+**Constraints:**
+- **ARCHITECT CRITICAL FIX (Q1):**
   - Tier 1: Single queue, interrupt overwrites oldest normal
-  - Tier 2/3: Check reserved slot first (interrupts), then shared ring (normal/low)
-  - Ring buffer with wraparound, head/tail cursors
-
-**Testing Focus:**
-- Blob span accessors zero-allocation
-- Tier selection logic (threshold tests)
-- Tier 1 overwrite behavior
-- Tier 2/3 reserved slot priority
-- Ring wraparound works
-- Validation catches invalid definitions
-
-**Current Issues (BATCH-04):**
-- Blob not sealed, arrays exposed as public
-- Missing ActionIds/GuardIds dispatch tables
-- Event queue ring doesn't enforce priority ordering within ring
-
-**Design Ref:** `HSM-Implementation-Design.md` Sections 1.2 (Blob), 1.3 (Instance Layout), 3.2 (Event Processing)
+  - Tier 2/3: 24B reserved slot + shared ring
 
 ---
 
-## Phase 2: Compiler (6 days)
-
-**Goal:** Transform user-defined state machines into `HsmDefinitionBlob` bytecode.
-
-**Design Ref:** `HSM-Implementation-Design.md` Section 2 (Compiler Pipeline)
-
-**Pipeline Stages:**
-1. Builder API → Graph
-2. Normalizer (assign IDs, resolve implicit states)
-3. Validator (check rules)
-4. Flattener (tree → flat arrays)
-5. Emitter (serialize to blob)
-
----
-
-### BATCH-05: Compiler - Graph Builder & Parser
-**Effort:** 2 days
+### TASK-D07: Event Structure
+**Status:** ✅ DONE  
+**Deliverable:** `HsmEvent.cs` (24 bytes), `EventFlags` enum  
+**Design Ref:** HSM-Implementation-Design.md §1.4
 
 **Scope:**
-Create fluent C# API for defining state machines + intermediate graph representation.
+- 8B header (EventId, Priority, Flags, Timestamp)
+- 16B payload (inline or ID for indirection)
+- EventFlags (IsDeferred, IsIndirect, IsConsumed)
 
-**Deliverables:**
-- `Graph/StateNode.cs` - Mutable state node with children, transitions, regions
-- `Graph/TransitionNode.cs` - Source/target, event, guard, action
-- `Graph/RegionNode.cs` - Orthogonal region container
-- `Graph/StateMachineGraph.cs` - Root container with state dictionary, event registry
-- `HsmBuilder.cs` - Public fluent API (State().OnEntry().On().GoTo())
-- 15+ tests verifying API creates correct graph structures
-
-**Critical Constraints:**
-- **StableId (Guid):** Each state gets GUID for hot reload stability (Architect Q3)
-- **Function names as strings:** Resolved to function pointers by source gen later
-- **Fluent API:** Chainable methods for ergonomic definition
-
-**Design Details:**
-- **StateNode:** Name, StableId, Parent, Children[], Transitions[], Regions[], IsInitial, IsHistory, Actions (OnEntry/Exit/Activity/Timer)
-- **Builder pattern:** HsmBuilder → StateBuilder → TransitionBuilder
-- **Event registry:** Map event names to ushort IDs
-- **Function registry:** Track registered action/guard names for validation
-
-**Example Usage:**
-```csharp
-var builder = new HsmBuilder("Enemy")
-    .Event("Damaged", 1)
-    .Event("Death", 2)
-    .RegisterAction("TakeDamage")
-    .RegisterAction("Die")
-    .State("Idle")
-        .OnEntry("Initialize")
-        .On("Damaged").GoTo("Hurt").Action("TakeDamage")
-        .Child("Patrolling")
-            .Activity("Patrol");
-```
-
-**Testing Focus:**
-- Builder creates graph with correct structure
-- State hierarchy preserved
-- Transitions connect correct states
-- Events registered with IDs
-- Duplicate state names throw
-- Unknown event/state references throw
-
-**Design Ref:** `HSM-Implementation-Design.md` Section 2.1 (Builder Graph)
+**Constraints:**
+- Exactly 24 bytes
+- Fixed size (no variable payload)
 
 ---
 
-### BATCH-06: Compiler - Normalizer & Validator
-**Effort:** 2 days
+### TASK-D08: Command Buffer
+**Status:** ✅ DONE  
+**Deliverable:** `CommandPage.cs` (4KB), `HsmCommandWriter.cs`  
+**Design Ref:** HSM-Implementation-Design.md §1.4, Arch Q2
 
 **Scope:**
-Normalize graph (assign flat indices, compute depths) and validate correctness.
+- CommandPage: 4096 bytes (OS page size, Architect Q2)
+- HsmCommandWriter: ref struct for zero-alloc writing
 
-**Deliverables:**
-- `HsmNormalizer.cs` - Assign FlatIndex, compute Depth, resolve initial states
-- `HsmGraphValidator.cs` - Structural validation rules
-- Validator rules (~20 checks)
-- 20+ tests covering normalization and validation
+**Constraints:**
+- Page size 4KB
+- Writer is ref struct (stack-only)
 
-**Critical Constraints:**
-- **History slot assignment:** MUST sort by StableId (Guid) for hot reload stability (Architect Q3)
-- **Initial state resolution:** Each composite needs initial child (explicit or first)
-- **Depth computation:** Parent depth + 1
-- **FlatIndex assignment:** Breadth-first for cache locality
+---
 
-**Validation Rules:**
-- No orphan states (all have path to root)
+### TASK-D09: Definition Blob Container
+**Status:** ⚠️ NEEDS FIXES  
+**Deliverable:** `HsmDefinitionHeader.cs` (32B), `HsmDefinitionBlob.cs`  
+**Design Ref:** HSM-Implementation-Design.md §1.2
+
+**Scope:**
+- Header: Magic (0x4D534846), StructureHash, ParameterHash, counts
+- Blob: sealed class, ReadOnlySpan<T> accessors, dispatch tables
+
+**Constraints:**
+- Blob must be sealed
+- Arrays private readonly
+- Expose ReadOnlySpan<T> only
+- Include ActionIds[], GuardIds[]
+
+**Current Issues:**
+- Not sealed
+- Arrays public
+- Missing dispatch tables
+
+---
+
+### TASK-D10: Instance Manager
+**Status:** ⚠️ PARTIAL  
+**Deliverable:** `HsmInstanceManager.cs`  
+**Design Ref:** HSM-Implementation-Design.md §1.3
+
+**Scope:**
+- Initialize (zero memory, set defaults)
+- Reset (preserve MachineId/Seed, increment Generation)
+- SelectTier (heuristics based on complexity)
+
+**Constraints:**
+- Tier thresholds: T1(≤8 states), T2(≤32), T3(rest)
+
+---
+
+### TASK-D11: Event Queue Operations
+**Status:** ⚠️ PARTIAL  
+**Deliverable:** `HsmEventQueue.cs`  
+**Design Ref:** HSM-Implementation-Design.md §3.2, Arch Q1
+
+**Scope:**
+- TryEnqueue (tier-specific strategies)
+- TryDequeue (priority-ordered)
+- TryPeek, Clear, GetCount
+
+**Constraints:**
+- **MUST implement Architect's tier strategies (Q1)**
+- Tier 1: Overwrite logic
+- Tier 2/3: Reserved slot + ring
+
+**Current Issues:**
+- Ring doesn't enforce priority ordering within ring
+
+---
+
+### TASK-D12: Validation Helpers
+**Status:** ⚠️ PARTIAL  
+**Deliverable:** `HsmValidator.cs`  
+**Design Ref:** HSM-Implementation-Design.md §2.3
+
+**Scope:**
+- ValidateDefinition (magic, counts, structure)
+- ValidateInstance (phase, IDs, consistency)
+- IsValidStateId, IsValidTransitionId
+
+**Constraints:**
+- Catch common errors
 - No circular parent chains
-- All transitions target valid states
-- Initial states exist where required
-- Function names registered (actions/guards)
-- No duplicate state names
-- Event IDs unique
-- State depth ≤ max (from tier limits)
-- Region count ≤ max (from tier limits)
-- History states have valid parent
-
-**Testing Focus:**
-- FlatIndex assigned in correct order
-- Depth computed correctly for nested states
-- History slots sorted by StableId (not name)
-- Validation catches circular dependencies
-- Validation catches missing initial states
-- Validation catches invalid transitions
-
-**Design Ref:** `HSM-Implementation-Design.md` Section 2.2 (Normalization), 2.3 (Validation)
 
 ---
 
-### BATCH-07: Compiler - Flattener & Emitter
-**Effort:** 2 days
+## Phase C: Compiler
+
+### TASK-C01: Graph Node Structures
+**Status:** ✅ DONE  
+**Deliverable:** `StateNode.cs`, `TransitionNode.cs`, `RegionNode.cs`  
+**Design Ref:** HSM-Implementation-Design.md §2.1
 
 **Scope:**
-Convert normalized graph to flat arrays and emit `HsmDefinitionBlob`.
+- StateNode: StableId (Guid), hierarchy, actions
+- TransitionNode: Source/target, event, guard, action
+- RegionNode: Orthogonal region container
 
-**Deliverables:**
-- `HsmFlattener.cs` - Graph → flat StateDef[], TransitionDef[], etc.
-- `HsmEmitter.cs` - Create HsmDefinitionBlob from flat arrays
-- Hash computation (StructureHash, ParameterHash)
-- 15+ tests verifying correct blob emission
+**Constraints:**
+- StableId for hot reload stability
+- Mutable graph nodes
 
-**Critical Constraints:**
-- **StructureHash:** Hash topology only (parent/child structure, state count)
-- **ParameterHash:** Hash logic (actions, guards, event IDs)
-- **Transition cost:** Compute LCA structural distance (Architect Q6)
-- **Global transitions:** Separate table (Architect Q7)
+---
 
-**Design Details:**
-- **Flattening:**
-  - Walk graph in BFS order (assigned FlatIndex)
-  - Convert StateNode → StateDef (indices replace pointers)
-  - Convert TransitionNode → TransitionDef
-  - Build dispatch tables (ActionIds[], GuardIds[])
-- **Hashing:**
-  - StructureHash: Hash(StateCount, ParentIndices[], Depths[])
-  - ParameterHash: Hash(ActionBindings[], GuardIds[], EventIds[])
-- **Header population:** StateCount, TransitionCount, RegionCount, etc.
+### TASK-C02: State Machine Graph Container
+**Status:** ✅ DONE  
+**Deliverable:** `StateMachineGraph.cs`  
+**Design Ref:** HSM-Implementation-Design.md §2.1
 
-**Testing Focus:**
-- Flattened arrays match graph structure
-- Parent/child indices correct
-- Transition indices point to correct states
+**Scope:**
+- Root state
+- State dictionary
+- Event registry
+- Function registrations
+
+**Constraints:**
+- Implicit __Root creation
+
+---
+
+### TASK-C03: Fluent Builder API
+**Status:** ✅ DONE  
+**Deliverable:** `HsmBuilder.cs`, `StateBuilder`, `TransitionBuilder`  
+**Design Ref:** HSM-Implementation-Design.md §2.1
+
+**Scope:**
+- HsmBuilder: Entry point
+- StateBuilder: Configure states
+- TransitionBuilder: Configure transitions
+
+**Constraints:**
+- Fluent chaining
+- Error handling (duplicate states, unknown events)
+
+---
+
+### TASK-C04: Graph Normalizer
+**Status:** ✅ DONE  
+**Deliverable:** `HsmNormalizer.cs`  
+**Design Ref:** HSM-Implementation-Design.md §2.2, Arch Q3
+
+**Scope:**
+- Assign FlatIndex (BFS)
+- Compute Depth
+- Resolve Initial States
+- **Assign History Slots (CRITICAL: sort by StableId)**
+- Compute Transition Ranges
+
+**Constraints:**
+- **ARCHITECT CRITICAL (Q3): History slots sorted by StableId (Guid)**
+- BFS for cache locality
+
+---
+
+### TASK-C05: Graph Validator
+**Status:** ✅ DONE  
+**Deliverable:** `HsmGraphValidator.cs`  
+**Design Ref:** HSM-Implementation-Design.md §2.3
+
+**Scope:**
+- 20+ validation rules
+- Structural (orphans, cycles)
+- Transitions (valid targets)
+- Functions (registered)
+- Limits (depth, counts)
+
+**Constraints:**
+- Accumulate all errors
+- Clear error messages
+
+---
+
+### TASK-C06: Graph Flattener
+**Status:** ⚪ TODO  
+**Deliverable:** `HsmFlattener.cs`  
+**Design Ref:** HSM-Implementation-Design.md §2.4
+
+**Scope:**
+- Convert StateNode → StateDef[]
+- Convert TransitionNode → TransitionDef[]
+- Build dispatch tables (ActionIds[], GuardIds[])
+- Compute transition costs (LCA distance)
+
+**Constraints:**
+- Preserve FlatIndex order
+- Transition cost structural-only (Architect Q6)
+
+---
+
+### TASK-C07: Blob Emitter
+**Status:** ⚪ TODO  
+**Deliverable:** `HsmEmitter.cs`  
+**Design Ref:** HSM-Implementation-Design.md §2.5
+
+**Scope:**
+- Create HsmDefinitionBlob from flat arrays
+- Compute StructureHash (topology)
+- Compute ParameterHash (logic)
+- Populate header
+
+**Constraints:**
 - StructureHash stable across renames
 - ParameterHash changes when logic changes
-- Blob validates with HsmValidator
-
-**Design Ref:** `HSM-Implementation-Design.md` Section 2.4 (Flattening), 2.5 (Emission)
 
 ---
 
-## Phase 3: Kernel (8.5 days)
+## Phase K: Kernel
 
-**Goal:** Implement runtime execution engine (tick, events, transitions, LCA).
-
-**Design Ref:** `HSM-Implementation-Design.md` Section 3 (Runtime Kernel)
-
-**Kernel Phases (per tick):**
-1. Timer Decrement
-2. Event Processing (priority-sorted)
-3. Run-To-Completion (RTC) loop
-4. Activity Execution
-
----
-
-### BATCH-08: Kernel - Entry Point & Setup
-**Effort:** 1.5 days
+### TASK-K01: Kernel Entry Point
+**Status:** ⚪ TODO  
+**Deliverable:** `HsmKernel.cs`, `HsmKernelCore.cs`  
+**Design Ref:** HSM-Implementation-Design.md §3.1, Arch Q9
 
 **Scope:**
-Core kernel API with phase management and instance linking.
+- UpdateBatch API (thin shim pattern)
+- Void* core (non-generic)
+- Generic wrapper (inlined)
+- Phase management
 
-**Deliverables:**
-- `HsmKernel.cs` - UpdateBatch API (thin shim pattern)
-- `HsmKernelCore.cs` - Void* core (non-generic, Architect Q9)
-- Instance phase transitions (Idle → Entry → RTC → Activity → Idle)
-- Definition-instance linking
-- 10+ tests
-
-**Critical Constraints:**
-- **Thin Shim Pattern (Architect Directive 1):**
-  ```csharp
-  // Non-generic core (compiled once)
-  private static unsafe void UpdateBatchCore(void* instancePtr, void* contextPtr, ...)
-  
-  // Generic wrapper (inlined)
-  [MethodImpl(AggressiveInlining)]
-  public static unsafe void UpdateBatch<T, TContext>(...) where T : unmanaged where TContext : unmanaged
-  {
-      fixed (void* ctx = &context)
-      fixed (void* inst = instances)
-      {
-          UpdateBatchCore(inst, ctx, ...);
-      }
-  }
-  ```
-- **Deterministic execution:** No implicit ordering, explicit phase sequencing
-
-**Design Details:**
-- **UpdateBatch signature:** `UpdateBatch<T>(HsmDefinitionBlob def, Span<T> instances, in TContext context)`
-- **Phase flow:** Check phase, execute corresponding kernel pass, advance phase
-- **Batch processing:** Process multiple instances in one call (ECS-style)
-
-**Testing Focus:**
-- Phase transitions correct
-- Batch processes all instances
-- Generic wrapper eliminates overhead (benchmark?)
-- Invalid phase throws/fails gracefully
-
-**Design Ref:** `HSM-Implementation-Design.md` Section 3.1 (Entry Point), Architect Q9
+**Constraints:**
+- **Thin Shim Pattern (Architect Directive 1)**
+- AggressiveInlining on wrapper
 
 ---
 
-### BATCH-09: Kernel - Timer & Event Processing
-**Effort:** 2 days
+### TASK-K02: Timer Decrement
+**Status:** ⚪ TODO  
+**Deliverable:** Timer phase logic in kernel  
+**Design Ref:** HSM-Implementation-Design.md §3.2
 
 **Scope:**
-Implement timer decrement and priority-based event processing.
+- Decrement TimerDeadlines[] by deltaTime
+- Enqueue timer event when deadline ≤ 0
 
-**Deliverables:**
-- Timer decrement (Phase 1)
-- Event dequeue with priority (Interrupt > Normal > Low)
+**Constraints:**
+- Phase 1 of tick
+
+---
+
+### TASK-K03: Event Processing
+**Status:** ⚪ TODO  
+**Deliverable:** Event phase logic in kernel  
+**Design Ref:** HSM-Implementation-Design.md §3.2
+
+**Scope:**
+- Dequeue highest priority event
+- Budget-gated catch-up
 - Deferred event handling
-- Budget-gated catch-up (prevent starvation)
-- 15+ tests
 
-**Critical Constraints:**
-- **Timer semantics:** Decrement all timers by delta, fire event when deadline ≤ 0
-- **Priority ordering:** Always process highest priority first (Architect Q1)
-- **Budget limit:** Max N events per tick to prevent infinite loops
-- **Deferred events:** Re-enqueue at end of tick if IsDeferred flag set
-
-**Design Details:**
-- **Phase 1 (Timer):**
-  - Iterate TimerDeadlines[] in instance
-  - Decrement by deltaTime
-  - If deadline ≤ 0, enqueue timer event (from state definition)
-- **Phase 2 (Event):**
-  - Dequeue highest priority event (HsmEventQueue.TryDequeue)
-  - Check budget (remaining event processing quota)
-  - Process event → find matching transitions
-  - If consumed, continue. If deferred, re-enqueue at low priority
-
-**Testing Focus:**
-- Timers decrement correctly
-- Timer fires event at deadline
-- Event priority ordering (interrupt processed first)
-- Deferred events re-enqueued
-- Budget prevents runaway event loops
-
-**Design Ref:** `HSM-Implementation-Design.md` Section 3.2 (Event Processing)
+**Constraints:**
+- Priority ordering (Interrupt > Normal > Low)
+- Budget prevents infinite loops
 
 ---
 
-### BATCH-10: Kernel - RTC Loop & Transitions
-**Effort:** 3 days
+### TASK-K04: RTC Loop
+**Status:** ⚪ TODO  
+**Deliverable:** RTC phase logic in kernel  
+**Design Ref:** HSM-Implementation-Design.md §3.3, Arch Q4
 
 **Scope:**
-Run-To-Completion loop with transition selection and execution.
-
-**Deliverables:**
-- RTC loop (bounded iteration)
+- Bounded iteration
 - Transition selection (priority, guards)
-- Guard evaluation with context
-- Action execution
-- Fail-safe state (prevent infinite loops)
-- 20+ tests
+- Guard evaluation
+- Fail-safe state
 
-**Critical Constraints:**
-- **RTC semantics:** Process transition chains until stable or max iterations
-- **Guard evaluation:** Call user-provided guard function with context
-- **RNG in guards (Architect Q4):** Allowed if `[HsmGuard(UsesRNG=true)]`, debug-only access tracking
-- **Max iterations:** Clamp at ~100 to prevent infinite loops, enter fail-safe state if exceeded
-- **Deterministic selection:** Priority-sorted, first matching guard wins
-
-**Design Details:**
-- **RTC loop:**
-  ```
-  for (int i = 0; i < MaxRTCIterations; i++) {
-      transition = SelectTransition(currentState, event, context);
-      if (transition == null) break;  // Stable
-      ExecuteTransition(transition, context);
-  }
-  if (i >= MaxRTCIterations) EnterFailSafeState();
-  ```
-- **Transition selection:**
-  - Get transitions for current state (FirstTransitionIndex, range)
-  - Filter by EventId
-  - Sort by priority (high → low)
-  - Evaluate guards in order
-  - Return first where guard returns true
-- **Guard evaluation:**
-  - Cast void* context to TContext*
-  - Call function pointer from dispatch table
-  - Pass: instance, context, event payload
-
-**Testing Focus:**
-- Simple transition works (A → B)
-- Guard blocks transition
-- Priority determines selection order
-- RTC executes chain (A → B → C)
-- Max iterations triggers fail-safe
-- Multiple guards evaluated in priority order
-
-**Design Ref:** `HSM-Implementation-Design.md` Section 3.3 (RTC Loop), Architect Q4
+**Constraints:**
+- Max iterations ~100
+- RNG in guards allowed with attribute (Architect Q4)
 
 ---
 
-### BATCH-11: Kernel - LCA & Execution
-**Effort:** 2 days
+### TASK-K05: LCA Algorithm
+**Status:** ⚪ TODO  
+**Deliverable:** LCA computation in kernel  
+**Design Ref:** HSM-Implementation-Design.md §3.4
 
 **Scope:**
-Least Common Ancestor algorithm and hierarchical transition execution (exit/enter actions).
+- Find common ancestor
+- Compute exit path (bottom-up)
+- Compute enter path (top-down)
 
-**Deliverables:**
-- LCA computation
-- Exit action execution (bottom-up)
-- Entry action execution (top-down)
+**Constraints:**
+- Efficient algorithm
+- Handle root transitions
+
+---
+
+### TASK-K06: Transition Execution
+**Status:** ⚪ TODO  
+**Deliverable:** Execution logic in kernel  
+**Design Ref:** HSM-Implementation-Design.md §3.5, Arch Q3
+
+**Scope:**
+- Exit actions (bottom-up)
+- Entry actions (top-down)
 - History state restore
-- Activity execution (Phase 4)
-- 20+ tests
+- Internal transitions
 
-**Critical Constraints:**
-- **LCA algorithm:** Find common ancestor of source and target states
-- **Exit order:** Bottom-up (leaf to LCA)
-- **Enter order:** Top-down (LCA to target)
-- **History restore:** Load HistorySlots, validate with IsAncestor (Architect Q3)
-- **Internal transitions:** Skip exit/entry, only run transition action
-
-**Design Details:**
-- **LCA computation:**
-  ```
-  LCA(source, target):
-      Walk source up to root, mark ancestors
-      Walk target up until hit marked ancestor
-  ```
-- **Exit path:** [currentLeaf, parent, ..., LCA]
-- **Enter path:** [LCA, ..., parent, targetLeaf]
-- **Action execution:** Call via function pointer from dispatch table
-- **History:** Read HistorySlots[stateHistoryIndex], check IsValidStateId + IsAncestor
-
-**Testing Focus:**
-- LCA of siblings correct (parent)
-- LCA of parent-child (parent)
-- Exit actions run bottom-up
-- Entry actions run top-down
-- History state restores correct leaf
-- Internal transition skips exit/entry
-- Activity runs in Phase 4
-
-**Design Ref:** `HSM-Implementation-Design.md` Section 3.4 (LCA Resolution), 3.5 (Execution), Architect Q3
+**Constraints:**
+- History restore validates with IsAncestor (Architect Q3)
+- Internal skips exit/entry
 
 ---
 
-## Phase 4: Tooling (3 days)
-
-**Goal:** Hot reload and debug tracing for development workflow.
-
-**Design Ref:** `HSM-Implementation-Design.md` Section 4 (Tooling & Observability)
-
----
-
-### BATCH-12: Hot Reload Manager
-**Effort:** 1.5 days
+### TASK-K07: Activity Execution
+**Status:** ⚪ TODO  
+**Deliverable:** Activity phase logic in kernel  
+**Design Ref:** HSM-Implementation-Design.md §3.5
 
 **Scope:**
-Detect blob changes and safely reload or reset instances.
+- Execute activity actions for active states
+- Phase 4 of tick
 
-**Deliverables:**
-- `HsmHotReloadManager.cs` - Compare hashes, decide reload strategy
-- Structure change detection (StructureHash)
-- Parameter change detection (ParameterHash)
-- Instance migration or reset
-- 10+ tests
-
-**Critical Constraints:**
-- **Structure change → Hard reset:** Memory layout changed, unsafe to migrate
-- **Parameter change → Preserve state:** Only logic changed, keep active states
-- **Hash comparison:** Compare new blob header with running instance MachineId
-
-**Design Details:**
-- **Reload decision:**
-  ```
-  if (newBlob.StructureHash != instance.MachineId) → HardReset
-  else if (newBlob.ParameterHash != old.ParameterHash) → SoftReload
-  else → NoChange
-  ```
-- **Hard reset:** Call HsmInstanceManager.Reset, loses state
-- **Soft reload:** Update MachineId, preserve ActiveLeafIds/History
-
-**Testing Focus:**
-- Structure change triggers hard reset
-- Parameter change preserves state
-- Hash comparison correct
-- Multiple instances handled
-
-**Design Ref:** `HSM-Implementation-Design.md` Section 4.1 (Hot Reload), Architect Q3, Q8
+**Constraints:**
+- Only for states with ActivityAction
 
 ---
 
-### BATCH-13: Debug Tracing
-**Effort:** 1.5 days
+## Phase T: Tooling
+
+### TASK-T01: Hot Reload Manager
+**Status:** ⚪ TODO  
+**Deliverable:** `HsmHotReloadManager.cs`  
+**Design Ref:** HSM-Implementation-Design.md §4.1, Arch Q3, Q8
 
 **Scope:**
-Ring buffer trace recording for debugging and replay.
+- Compare hashes (Structure vs Parameter)
+- Hard reset (structure change)
+- Soft reload (parameter change)
+- Instance migration
 
-**Deliverables:**
-- `HsmTraceBuffer.cs` - Per-thread ring buffer
-- Trace record types (StateEntry, StateExit, Transition, Event, GuardEval)
-- Trace filtering (by entity ID, event type, mode)
-- Trace export (binary format)
-- 10+ tests
-
-**Critical Constraints:**
-- **Zero-allocation:** Pre-allocated ring buffer, no GC pressure
-- **Thread-local:** One buffer per thread, no locking
-- **Filtering:** Runtime enable/disable by mode (Architect Q8)
-- **Binary format:** Efficient, no text parsing
-
-**Design Details:**
-- **Trace record:** Timestamp, InstanceId, RecordType, Data (state/event IDs)
-- **Ring buffer:** Fixed size (e.g., 4096 records), wraparound on overflow
-- **Filtering modes:** All, EntityId, EventType, StateTransitions, GuardsOnly
-- **Export:** Dump to byte array for external analysis
-
-**Testing Focus:**
-- Records added to buffer
-- Ring wraparound works
-- Filtering excludes correct records
-- Export produces valid binary
-- Thread-local buffers don't conflict
-
-**Design Ref:** `HSM-Implementation-Design.md` Section 4.2 (Debug Tracing), Architect Q8
+**Constraints:**
+- Structure change → hard reset
+- Parameter change → preserve state
 
 ---
 
-## Phase 5: Examples & Polish (3 days)
-
-**Goal:** Working example + documentation for users.
-
----
-
-### BATCH-14: Console Example Application
-**Effort:** 1 day
+### TASK-T02: Debug Trace Buffer
+**Status:** ⚪ TODO  
+**Deliverable:** `HsmTraceBuffer.cs`  
+**Design Ref:** HSM-Implementation-Design.md §4.2, Arch Q8
 
 **Scope:**
-Complete, runnable example demonstrating all features.
+- Ring buffer (per-thread)
+- Trace records (StateEntry, Transition, etc.)
+- Filtering (by entity, event, mode)
+- Export (binary format)
 
-**Deliverables:**
-- `Fhsm.Examples.Console` - Traffic light or enemy AI example
-- Define machine with builder API
-- Compile to blob
-- Run kernel with instances
-- Print state transitions
+**Constraints:**
+- Zero-allocation
+- Thread-local
+- All filtering modes enabled (Architect Q8)
+
+---
+
+## Phase E: Examples & Polish
+
+### TASK-E01: Console Example
+**Status:** ⚪ TODO  
+**Deliverable:** `Fhsm.Examples.Console` working app  
+**Design Ref:** N/A
+
+**Scope:**
+- Traffic light or enemy AI example
+- Demonstrate all features
 - README with explanation
 
-**Design Details:**
-- **Example machine:** Traffic light (Red → Yellow → Green) or simple enemy AI
-- **Demonstrate:**
-  - Hierarchical states (nested)
-  - Transitions with guards
-  - Timers
-  - Events (external triggers)
-  - Actions (console output)
-- **Code walkthrough:** Commented to explain each part
-
-**Testing Focus:**
-- Example compiles
-- Example runs without errors
-- State transitions visible in output
-- README clear for new users
+**Constraints:**
+- Runnable, clear output
 
 ---
 
-### BATCH-15: Documentation & Polish
-**Effort:** 2 days
+### TASK-E02: Documentation
+**Status:** ⚪ TODO  
+**Deliverable:** API docs, guides  
+**Design Ref:** N/A
 
 **Scope:**
-API documentation, performance notes, final cleanup.
+- XML doc comments
+- Performance guide
+- Architecture overview
+- Migration guide
 
-**Deliverables:**
-- API reference (XML doc comments)
-- Performance guide (tier selection, memory layout)
-- Architecture overview document
-- Migration guide (from other HSM libs)
-- Final code review and cleanup
-
-**Testing Focus:**
-- All public APIs have XML docs
+**Constraints:**
 - No compiler warnings
-- Code style consistent
-- README.md at root with quick start
+- Clear for new users
 
 ---
 
-## Summary
+## Task Dependencies
 
-**Total:** 15 batches, ~24 days estimated
-
-**Critical Path:**
-- Phase 1 (Data) → Phase 2 (Compiler) → Phase 3 (Kernel) → Phase 4/5 (Tooling/Examples)
-
-**Architect's Critical Decisions:**
-- Q1: Event queue tier-specific strategies (BATCH-02, BATCH-04)
-- Q3: History slot StableId sorting (BATCH-06)
-- Q4: RNG in guards allowed with attribute (BATCH-10)
-- Q6: Structural-only transition cost (BATCH-07)
-- Q7: Separate global transition table (BATCH-07)
-- Q8: All trace filtering modes (BATCH-13)
-- Q9: Thin shim pattern with AggressiveInlining (BATCH-08)
-
-**Current Status:** 
-- Phase 1: 3 batches done, 1 needs fixes (blob refactor)
-- Phase 2: Starting BATCH-05
+```
+D01-D04 → D05-D08 → D09-D12
+         ↓
+C01-C03 → C04-C05 → C06-C07
+                   ↓
+K01 → K02-K03 → K04 → K05-K06 → K07
+                      ↓
+T01-T02
+↓
+E01-E02
+```
 
 ---
 
-**For questions about task scope, see:**
-- This document (TASK-DEFINITIONS.md)
-- Design: `docs/design/HSM-Implementation-Design.md`
-- Architect: `docs/design/ARCHITECT-REVIEW-SUMMARY.md`
-- Status: `.dev-workstream/TASK-TRACKER.md`
-- Batches: `.dev-workstream/batches/BATCH-XX-INSTRUCTIONS.md`
+## Quick Reference
+
+**By Status:**
+- ✅ DONE: D01-D08, C01-C05
+- ⚠️ NEEDS FIXES: D09-D12
+- ⚪ TODO: C06-C07, K01-K07, T01-T02, E01-E02
+
+**Critical Architect Decisions:**
+- D06: Event queue tier strategies (Q1)
+- C04: History slot StableId sorting (Q3)
+- K04: RNG in guards (Q4)
+- C06: Structural-only cost (Q6)
+- C06: Separate global table (Q7)
+- T02: All trace modes (Q8)
+- K01: Thin shim pattern (Q9)

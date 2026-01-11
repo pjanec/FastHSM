@@ -1,36 +1,70 @@
 # Task Tracker
 
-**See:** `TASK-DEFINITIONS.md` for detailed scope and design references.
+**See:** [TASK-DEFINITIONS.md](TASK-DEFINITIONS.md) for detailed task descriptions.
 
-| # | Task | Status | Actual | Ref |
-|---|------|--------|--------|-----|
-| 01 | ROM Structs | 🟢 | 0.5d | Design §1.1 |
-| 02 | RAM Instances | 🟢 | 0.5d | Design §1.3, Arch Q1 |
-| 03 | Event/Command | 🟢 | 0.5d | Design §1.4 |
-| 04 | Blob/Instance Mgmt | ⚠️ | 2d | Design §1.2, §3.2 |
-| 05 | Compiler - Graph | 🟢 | 1d | Design §2.1 |
-| 06 | Compiler - Normalize | 🟡 | - | Design §2.2-2.3, Arch Q3 |
-| 07 | Compiler - Flatten | ⚪ | - | Design §2.4-2.5, Arch Q6-Q7 |
-| 08 | Kernel - Entry | ⚪ | - | Design §3.1, Arch Q9 |
-| 09 | Kernel - Events | ⚪ | - | Design §3.2 |
-| 10 | Kernel - RTC | ⚪ | - | Design §3.3, Arch Q4 |
-| 11 | Kernel - LCA | ⚪ | - | Design §3.4-3.5 |
-| 12 | Hot Reload | ⚪ | - | Design §4.1, Arch Q8 |
-| 13 | Debug Trace | ⚪ | - | Design §4.2 |
-| 14 | Console Example | ⚪ | - | - |
-| 15 | Docs/Polish | ⚪ | - | - |
+---
 
-**Progress:** 4 done, 1 needs fixes, 10 remaining  
-**Current:** BATCH-06 (Compiler - Normalize/Validate)
+## Phase D: Data Layer
 
-**Phases:**
-- ✅ Phase 1.1-1.3: Data Layer (3/4 done)
-- ⚠️ Phase 1.4: BATCH-04 fixes needed
-- 🟡 Phase 2: Compiler (1/3 done)
-- ⚪ Phase 3: Kernel
-- ⚪ Phase 4: Tooling
-- ⚪ Phase 5: Examples
+- [x] **TASK-D01** ROM Enumerations → [details](TASK-DEFINITIONS.md#task-d01-rom-enumerations)
+- [x] **TASK-D02** ROM State Definition → [details](TASK-DEFINITIONS.md#task-d02-rom-state-definition)
+- [x] **TASK-D03** ROM Transition Definition → [details](TASK-DEFINITIONS.md#task-d03-rom-transition-definition)
+- [x] **TASK-D04** ROM Region & Global Transition → [details](TASK-DEFINITIONS.md#task-d04-rom-region--global-transition)
+- [x] **TASK-D05** RAM Instance Header → [details](TASK-DEFINITIONS.md#task-d05-ram-instance-header)
+- [x] **TASK-D06** RAM Instance Tiers (Architect Q1) → [details](TASK-DEFINITIONS.md#task-d06-ram-instance-tiers)
+- [x] **TASK-D07** Event Structure → [details](TASK-DEFINITIONS.md#task-d07-event-structure)
+- [x] **TASK-D08** Command Buffer → [details](TASK-DEFINITIONS.md#task-d08-command-buffer)
+- [⚠️] **TASK-D09** Definition Blob Container → [details](TASK-DEFINITIONS.md#task-d09-definition-blob-container) *needs fixes*
+- [⚠️] **TASK-D10** Instance Manager → [details](TASK-DEFINITIONS.md#task-d10-instance-manager) *partial*
+- [⚠️] **TASK-D11** Event Queue Operations (Architect Q1) → [details](TASK-DEFINITIONS.md#task-d11-event-queue-operations) *partial*
+- [⚠️] **TASK-D12** Validation Helpers → [details](TASK-DEFINITIONS.md#task-d12-validation-helpers) *partial*
 
-**Key:**
-- Design = `docs/design/HSM-Implementation-Design.md`
-- Arch = `docs/design/ARCHITECT-REVIEW-SUMMARY.md`
+## Phase C: Compiler
+
+- [x] **TASK-C01** Graph Node Structures → [details](TASK-DEFINITIONS.md#task-c01-graph-node-structures)
+- [x] **TASK-C02** State Machine Graph Container → [details](TASK-DEFINITIONS.md#task-c02-state-machine-graph-container)
+- [x] **TASK-C03** Fluent Builder API → [details](TASK-DEFINITIONS.md#task-c03-fluent-builder-api)
+- [x] **TASK-C04** Graph Normalizer (Architect Q3) → [details](TASK-DEFINITIONS.md#task-c04-graph-normalizer)
+- [x] **TASK-C05** Graph Validator → [details](TASK-DEFINITIONS.md#task-c05-graph-validator)
+- [ ] **TASK-C06** Graph Flattener (Architect Q6, Q7) → [details](TASK-DEFINITIONS.md#task-c06-graph-flattener)
+- [ ] **TASK-C07** Blob Emitter → [details](TASK-DEFINITIONS.md#task-c07-blob-emitter)
+
+## Phase K: Kernel
+
+- [ ] **TASK-K01** Kernel Entry Point (Architect Q9) → [details](TASK-DEFINITIONS.md#task-k01-kernel-entry-point)
+- [ ] **TASK-K02** Timer Decrement → [details](TASK-DEFINITIONS.md#task-k02-timer-decrement)
+- [ ] **TASK-K03** Event Processing → [details](TASK-DEFINITIONS.md#task-k03-event-processing)
+- [ ] **TASK-K04** RTC Loop (Architect Q4) → [details](TASK-DEFINITIONS.md#task-k04-rtc-loop)
+- [ ] **TASK-K05** LCA Algorithm → [details](TASK-DEFINITIONS.md#task-k05-lca-algorithm)
+- [ ] **TASK-K06** Transition Execution (Architect Q3) → [details](TASK-DEFINITIONS.md#task-k06-transition-execution)
+- [ ] **TASK-K07** Activity Execution → [details](TASK-DEFINITIONS.md#task-k07-activity-execution)
+
+## Phase T: Tooling
+
+- [ ] **TASK-T01** Hot Reload Manager (Architect Q3, Q8) → [details](TASK-DEFINITIONS.md#task-t01-hot-reload-manager)
+- [ ] **TASK-T02** Debug Trace Buffer (Architect Q8) → [details](TASK-DEFINITIONS.md#task-t02-debug-trace-buffer)
+
+## Phase E: Examples & Polish
+
+- [ ] **TASK-E01** Console Example → [details](TASK-DEFINITIONS.md#task-e01-console-example)
+- [ ] **TASK-E02** Documentation → [details](TASK-DEFINITIONS.md#task-e02-documentation)
+
+---
+
+## Progress Summary
+
+**Completed:** 13 tasks  
+**In Progress:** 4 tasks (needs fixes/partial)  
+**Remaining:** 10 tasks
+
+**Current Focus:** TASK-C06 (Graph Flattener)
+
+---
+
+## Key
+
+- [x] Done
+- [⚠️] Needs fixes or partial implementation
+- [ ] Not started
+- **Bold** = Task ID
+- → Link to detailed task definition

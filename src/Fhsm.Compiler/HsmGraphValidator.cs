@@ -1,0 +1,260 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Fhsm.Compiler.Graph;
+
+namespace Fhsm.Compiler
+{
+    internal class HsmGraphValidator
+    {
+        public class ValidationError
+        {
+            public string Message { get; set; }
+            public string? StateName { get; set; }
+            
+            public ValidationError(string message, string? stateName = null)
+            {
+                Message = message;
+                StateName = stateName;
+            }
+            
+            public override string ToString() => 
+                StateName != null ? $"[{StateName}] {Message}" : Message;
+        }
+        
+        /// <summary>
+        /// Validate graph. Returns list of errors (empty if valid).
+        /// </summary>
+        public static List<ValidationError> Validate(StateMachineGraph graph)
+        {
+            var errors = new List<ValidationError>();
+            
+            if (graph == null)
+            {
+                errors.Add(new ValidationError("Graph is null"));
+                return errors;
+            }
+            
+            // Run all validation rules
+            ValidateStructure(graph, errors);
+            ValidateTransitions(graph, errors);
+            ValidateInitialStates(graph, errors);
+            ValidateHistoryStates(graph, errors);
+            ValidateFunctions(graph, errors);
+            ValidateLimits(graph, errors);
+            
+            return errors;
+        }
+        
+        private static void ValidateStructure(StateMachineGraph graph, List<ValidationError> errors)
+        {
+            // 1. Root exists
+            if (graph.RootState == null)
+            {
+                errors.Add(new ValidationError("Root state is null"));
+                return;
+            }
+            
+            // 2. No orphans (all states reachable from root)
+            var reachable = new HashSet<StateNode>();
+            CollectReachable(graph.RootState, reachable);
+            
+            foreach (var state in graph.States.Values)
+            {
+                if (!reachable.Contains(state))
+                {
+                    errors.Add(new ValidationError("Orphan state (not reachable from root)", state.Name));
+                }
+            }
+            
+            // 3. No circular parent chains
+            foreach (var state in graph.States.Values)
+            {
+                if (HasCircularParent(state))
+                {
+                    errors.Add(new ValidationError("Circular parent chain detected", state.Name));
+                }
+            }
+            
+            // 4. State names unique (already enforced by AddState, but check)
+            var names = new HashSet<string>();
+            foreach (var state in graph.States.Values)
+            {
+                if (!names.Add(state.Name))
+                {
+                    errors.Add(new ValidationError($"Duplicate state name: {state.Name}"));
+                }
+            }
+        }
+        
+        private static void ValidateTransitions(StateMachineGraph graph, List<ValidationError> errors)
+        {
+            foreach (var state in graph.States.Values)
+            {
+                foreach (var trans in state.Transitions)
+                {
+                    // Source valid
+                    if (trans.Source == null)
+                    {
+                        errors.Add(new ValidationError("Transition has null source", state.Name));
+                        continue;
+                    }
+                    
+                    // Target valid
+                    if (trans.Target == null)
+                    {
+                        errors.Add(new ValidationError("Transition has null target", state.Name));
+                        continue;
+                    }
+                    
+                    // Target exists in graph
+                    if (!graph.States.ContainsValue(trans.Target))
+                    {
+                        errors.Add(new ValidationError($"Transition target '{trans.Target.Name}' not in graph", state.Name));
+                    }
+                    
+                    // EventId registered
+                    if (!graph.EventNameToId.ContainsValue(trans.EventId))
+                    {
+                        errors.Add(new ValidationError($"Transition uses unregistered EventId {trans.EventId}", state.Name));
+                    }
+                }
+            }
+        }
+        
+        private static void ValidateInitialStates(StateMachineGraph graph, List<ValidationError> errors)
+        {
+            foreach (var state in graph.States.Values)
+            {
+                if (state.Children.Count > 0)
+                {
+                    // Composite: must have exactly one initial
+                    var initialCount = state.Children.Count(c => c.IsInitial);
+                    
+                    if (initialCount == 0)
+                    {
+                        errors.Add(new ValidationError("Composite state has no initial child", state.Name));
+                    }
+                    else if (initialCount > 1)
+                    {
+                        errors.Add(new ValidationError("Composite state has multiple initial children", state.Name));
+                    }
+                }
+                else
+                {
+                    // Leaf: should not be marked initial (meaningless)
+                    // Actually, initial is relative to parent, so this is OK
+                }
+            }
+        }
+        
+        private static void ValidateHistoryStates(StateMachineGraph graph, List<ValidationError> errors)
+        {
+            foreach (var state in graph.States.Values)
+            {
+                if (state.IsHistory)
+                {
+                    // Must have parent
+                    if (state.Parent == null)
+                    {
+                        errors.Add(new ValidationError("History state has no parent", state.Name));
+                        continue;
+                    }
+                    
+                    // Parent must be composite
+                    if (state.Parent.Children.Count == 0)
+                    {
+                        errors.Add(new ValidationError("History state parent is not composite", state.Name));
+                    }
+                }
+            }
+        }
+        
+        private static void ValidateFunctions(StateMachineGraph graph, List<ValidationError> errors)
+        {
+            foreach (var state in graph.States.Values)
+            {
+                // Check actions
+                if (state.OnEntryAction != null && !graph.RegisteredActions.Contains(state.OnEntryAction))
+                {
+                    errors.Add(new ValidationError($"OnEntry action '{state.OnEntryAction}' not registered", state.Name));
+                }
+                
+                if (state.OnExitAction != null && !graph.RegisteredActions.Contains(state.OnExitAction))
+                {
+                    errors.Add(new ValidationError($"OnExit action '{state.OnExitAction}' not registered", state.Name));
+                }
+                
+                if (state.ActivityAction != null && !graph.RegisteredActions.Contains(state.ActivityAction))
+                {
+                    errors.Add(new ValidationError($"Activity action '{state.ActivityAction}' not registered", state.Name));
+                }
+                
+                // Check transition guards/actions
+                foreach (var trans in state.Transitions)
+                {
+                    if (trans.GuardFunction != null && !graph.RegisteredGuards.Contains(trans.GuardFunction))
+                    {
+                        errors.Add(new ValidationError($"Guard '{trans.GuardFunction}' not registered", state.Name));
+                    }
+                    
+                    if (trans.ActionFunction != null && !graph.RegisteredActions.Contains(trans.ActionFunction))
+                    {
+                        errors.Add(new ValidationError($"Transition action '{trans.ActionFunction}' not registered", state.Name));
+                    }
+                }
+            }
+        }
+        
+        private static void ValidateLimits(StateMachineGraph graph, List<ValidationError> errors)
+        {
+            // State count
+            if (graph.States.Count > 65535)
+            {
+                errors.Add(new ValidationError($"State count {graph.States.Count} exceeds limit 65535"));
+            }
+            
+            // Depth
+            foreach (var state in graph.States.Values)
+            {
+                if (state.Depth > 15)
+                {
+                    errors.Add(new ValidationError($"Depth {state.Depth} exceeds limit 15", state.Name));
+                }
+            }
+            
+            // Transition count
+            int totalTransitions = graph.States.Values.Sum(s => s.Transitions.Count);
+            if (totalTransitions > 65535)
+            {
+                errors.Add(new ValidationError($"Transition count {totalTransitions} exceeds limit 65535"));
+            }
+        }
+        
+        // Helpers
+        
+        private static void CollectReachable(StateNode node, HashSet<StateNode> reachable)
+        {
+            if (!reachable.Add(node)) return;  // Already visited
+            
+            foreach (var child in node.Children)
+            {
+                CollectReachable(child, reachable);
+            }
+        }
+        
+        private static bool HasCircularParent(StateNode state)
+            {
+            var visited = new HashSet<StateNode>();
+            var current = state;
+            
+            while (current != null)
+            {
+                if (!visited.Add(current)) return true;  // Cycle detected
+                current = current.Parent;
+            }
+            
+            return false;
+        }
+    }
+}
