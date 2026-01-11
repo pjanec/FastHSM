@@ -12,11 +12,11 @@ namespace Fhsm.Kernel.Data
     {
         // === Topology (4 bytes) ===
         [FieldOffset(0)] public ushort TargetStateIndex;    // Target state (global interrupt destination)
-        [FieldOffset(2)] public ushort TriggerEventId;      // Event that triggers
+        [FieldOffset(2)] public ushort EventId;             // Event that triggers
 
         // === Logic (4 bytes) ===
         [FieldOffset(4)] public ushort GuardId;             // Guard condition (0 = none)
-        [FieldOffset(6)] public ushort EffectActionId;      // Effect action (0 = none)
+        [FieldOffset(6)] public ushort ActionId;            // Effect action (0 = none)
 
         // === Flags & Priority (4 bytes) ===
         [FieldOffset(8)] public TransitionFlags Flags;      // Behavior flags (2 bytes)

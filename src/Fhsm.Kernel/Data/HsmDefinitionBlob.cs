@@ -6,56 +6,52 @@ namespace Fhsm.Kernel.Data
     /// Container for the immutable ROM definition of a state machine.
     /// helds the defining structures (States, Transitions, Regions, etc.).
     /// </summary>
-    public class HsmDefinitionBlob
+    public sealed class HsmDefinitionBlob
     {
-        /// <summary>
-        /// The header containing counts and validation info.
-        /// </summary>
         public HsmDefinitionHeader Header;
-
-        // Data arrays
-        private StateDef[] _states;
-        private TransitionDef[] _transitions;
-        private RegionDef[] _regions;
-        private GlobalTransitionDef[] _globalTransitions;
-
+        
+        private readonly StateDef[] _states;
+        private readonly TransitionDef[] _transitions;
+        private readonly RegionDef[] _regions;
+        private readonly GlobalTransitionDef[] _globalTransitions;
+        private readonly ushort[] _actionIds;
+        private readonly ushort[] _guardIds;
+        
         public HsmDefinitionBlob()
         {
             _states = Array.Empty<StateDef>();
             _transitions = Array.Empty<TransitionDef>();
             _regions = Array.Empty<RegionDef>();
             _globalTransitions = Array.Empty<GlobalTransitionDef>();
+            _actionIds = Array.Empty<ushort>();
+            _guardIds = Array.Empty<ushort>();
         }
 
-        public StateDef[] States
+        public HsmDefinitionBlob(
+            HsmDefinitionHeader header,
+            StateDef[] states,
+            TransitionDef[] transitions,
+            RegionDef[] regions,
+            GlobalTransitionDef[] globalTransitions,
+            ushort[] actionIds,
+            ushort[] guardIds)
         {
-            get => _states;
-            set => _states = value ?? Array.Empty<StateDef>();
+            Header = header;
+            _states = states ?? Array.Empty<StateDef>();
+            _transitions = transitions ?? Array.Empty<TransitionDef>();
+            _regions = regions ?? Array.Empty<RegionDef>();
+            _globalTransitions = globalTransitions ?? Array.Empty<GlobalTransitionDef>();
+            _actionIds = actionIds ?? Array.Empty<ushort>();
+            _guardIds = guardIds ?? Array.Empty<ushort>();
         }
-
-        public TransitionDef[] Transitions
-        {
-            get => _transitions;
-            set => _transitions = value ?? Array.Empty<TransitionDef>();
-        }
-
-        public RegionDef[] Regions
-        {
-            get => _regions;
-            set => _regions = value ?? Array.Empty<RegionDef>();
-        }
-
-        public GlobalTransitionDef[] GlobalTransitions
-        {
-            get => _globalTransitions;
-            set => _globalTransitions = value ?? Array.Empty<GlobalTransitionDef>();
-        }
-
-        // Span accessors (Zero-allocation)
-        public ReadOnlySpan<StateDef> StateSpan => _states;
-        public ReadOnlySpan<TransitionDef> TransitionSpan => _transitions;
-        public ReadOnlySpan<RegionDef> RegionSpan => _regions;
-        public ReadOnlySpan<GlobalTransitionDef> GlobalTransitionSpan => _globalTransitions;
+        
+        // Span accessors only
+        public ReadOnlySpan<StateDef> States => _states;
+        public ReadOnlySpan<TransitionDef> Transitions => _transitions;
+        public ReadOnlySpan<RegionDef> Regions => _regions;
+        public ReadOnlySpan<GlobalTransitionDef> GlobalTransitions => _globalTransitions;
+        public ReadOnlySpan<ushort> ActionIds => _actionIds;
+        public ReadOnlySpan<ushort> GuardIds => _guardIds;
 
         // Indexed accessors with bounds checking
         public ref readonly StateDef GetState(int index)

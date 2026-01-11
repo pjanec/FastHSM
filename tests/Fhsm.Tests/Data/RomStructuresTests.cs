@@ -148,9 +148,9 @@ namespace Fhsm.Tests.Data
         [Fact]
         public void StateFlags_Can_Combine_Flags()
         {
-            var flags = StateFlags.IsComposite | StateFlags.HasHistory;
+            var flags = StateFlags.IsComposite | StateFlags.IsHistory;
             Assert.True(flags.HasFlag(StateFlags.IsComposite));
-            Assert.True(flags.HasFlag(StateFlags.HasHistory));
+            Assert.True(flags.HasFlag(StateFlags.IsHistory));
             Assert.False(flags.HasFlag(StateFlags.IsFinal));
         }
 
@@ -223,11 +223,11 @@ namespace Fhsm.Tests.Data
             var def = new GlobalTransitionDef
             {
                 TargetStateIndex = 5,
-                TriggerEventId = 10,
+                EventId = 10,
                 Priority = 1
             };
             Assert.Equal(5, def.TargetStateIndex);
-            Assert.Equal(10, def.TriggerEventId);
+            Assert.Equal(10, def.EventId);
             Assert.Equal(1, def.Priority);
         }
 

@@ -10,9 +10,9 @@ namespace Fhsm.Kernel.Data
     {
         None = 0,
         IsComposite = 1 << 0,       // Has child states
-        HasHistory = 1 << 1,        // Tracks last active child
+        IsHistory = 1 << 1,         // Tracks last active child
         IsDeepHistory = 1 << 2,     // Deep history vs shallow
-        HasRegions = 1 << 3,        // Has orthogonal regions
+        IsParallel = 1 << 3,        // Has orthogonal regions
         HasOnEntry = 1 << 4,        // Has entry action
         HasOnExit = 1 << 5,         // Has exit action
         HasOnUpdate = 1 << 6,       // Has update/activity

@@ -14,7 +14,7 @@
 - [x] **TASK-D06** RAM Instance Tiers (Architect Q1) → [details](TASK-DEFINITIONS.md#task-d06-ram-instance-tiers)
 - [x] **TASK-D07** Event Structure → [details](TASK-DEFINITIONS.md#task-d07-event-structure)
 - [x] **TASK-D08** Command Buffer → [details](TASK-DEFINITIONS.md#task-d08-command-buffer)
-- [⚠️] **TASK-D09** Definition Blob Container → [details](TASK-DEFINITIONS.md#task-d09-definition-blob-container) *needs fixes*
+- [x] **TASK-D09** Definition Blob Container → [details](TASK-DEFINITIONS.md#task-d09-definition-blob-container)
 - [⚠️] **TASK-D10** Instance Manager → [details](TASK-DEFINITIONS.md#task-d10-instance-manager) *partial*
 - [⚠️] **TASK-D11** Event Queue Operations (Architect Q1) → [details](TASK-DEFINITIONS.md#task-d11-event-queue-operations) *partial*
 - [⚠️] **TASK-D12** Validation Helpers → [details](TASK-DEFINITIONS.md#task-d12-validation-helpers) *partial*
@@ -26,8 +26,8 @@
 - [x] **TASK-C03** Fluent Builder API → [details](TASK-DEFINITIONS.md#task-c03-fluent-builder-api)
 - [x] **TASK-C04** Graph Normalizer (Architect Q3) → [details](TASK-DEFINITIONS.md#task-c04-graph-normalizer)
 - [x] **TASK-C05** Graph Validator → [details](TASK-DEFINITIONS.md#task-c05-graph-validator)
-- [ ] **TASK-C06** Graph Flattener (Architect Q6, Q7) → [details](TASK-DEFINITIONS.md#task-c06-graph-flattener)
-- [ ] **TASK-C07** Blob Emitter → [details](TASK-DEFINITIONS.md#task-c07-blob-emitter)
+- [x] **TASK-C06** Graph Flattener (Architect Q6, Q7) → [details](TASK-DEFINITIONS.md#task-c06-graph-flattener)
+- [x] **TASK-C07** Blob Emitter → [details](TASK-DEFINITIONS.md#task-c07-blob-emitter)
 
 ## Phase K: Kernel
 
@@ -53,11 +53,11 @@
 
 ## Progress Summary
 
-**Completed:** 13 tasks  
-**In Progress:** 4 tasks (needs fixes/partial)  
-**Remaining:** 10 tasks
+**Completed:** 16 tasks  
+**In Progress:** 3 tasks (needs fixes/partial)  
+**Remaining:** 8 tasks
 
-**Current Focus:** TASK-C06 (Graph Flattener)
+**Current Focus:** Phase 2 (Compiler) complete! Ready for Phase 3 (Kernel)
 
 ---
 

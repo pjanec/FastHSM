@@ -13,7 +13,7 @@ namespace Fhsm.Kernel.Data
         [FieldOffset(0)] public ushort ParentIndex;         // Parent state (0xFFFF = root)
         [FieldOffset(2)] public ushort FirstChildIndex;     // First child state
         [FieldOffset(4)] public ushort ChildCount;          // Number of children
-        [FieldOffset(6)] public ushort TransitionStartIndex; // First transition index
+        [FieldOffset(6)] public ushort FirstTransitionIndex; // First transition index
         [FieldOffset(8)] public ushort TransitionCount;     // Number of transitions
         [FieldOffset(10)] public byte Depth;                // Hierarchy depth (0-16)
         [FieldOffset(11)] public byte RegionCount;          // Orthogonal regions
@@ -21,7 +21,7 @@ namespace Fhsm.Kernel.Data
         // === Actions (6 bytes) ===
         [FieldOffset(12)] public ushort OnEntryActionId;    // Entry action (0 = none)
         [FieldOffset(14)] public ushort OnExitActionId;     // Exit action (0 = none)
-        [FieldOffset(16)] public ushort OnUpdateActionId;   // Update/activity (0 = none)
+        [FieldOffset(16)] public ushort ActivityActionId;   // Update/activity (0 = none)
 
         // === Flags & Metadata (6 bytes) ===
         [FieldOffset(18)] public StateFlags Flags;          // Behavior flags (2 bytes)
@@ -32,8 +32,9 @@ namespace Fhsm.Kernel.Data
         [FieldOffset(24)] public ushort RegionStartIndex;   // First region index
         [FieldOffset(26)] public ushort InitialChildIndex;  // Initial child (0xFFFF = none)
 
-        // === Reserved (4 bytes) ===
-        [FieldOffset(28)] public uint Reserved;             // For future use
+        // === Navigation & Extra (4 bytes) ===
+        [FieldOffset(28)] public ushort NextSiblingIndex;   // Next sibling state (0xFFFF = none)
+        [FieldOffset(30)] public ushort TimerActionId;      // Timer action (0 = none)
 
         // Total: 32 bytes
     }

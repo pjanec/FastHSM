@@ -18,19 +18,18 @@ namespace Fhsm.Tests.Data
         [Fact]
         public void Blob_Can_Create_And_Access_Spans()
         {
-            var blob = new HsmDefinitionBlob();
-            blob.States = new StateDef[2];
+            var states = new StateDef[2];
+            var blob = new HsmDefinitionBlob(new HsmDefinitionHeader(), states, null, null, null, null, null);
             
-            Assert.Equal(2, blob.StateSpan.Length);
-            Assert.True(blob.StateSpan == blob.States); // Span points to array
+            Assert.Equal(2, blob.States.Length);
         }
 
         [Fact]
         public void Blob_Indexed_Access_Works()
         {
-            var blob = new HsmDefinitionBlob();
-            blob.States = new StateDef[1];
-            blob.States[0].ParentIndex = 999;
+            var states = new StateDef[1];
+            states[0].ParentIndex = 999;
+            var blob = new HsmDefinitionBlob(new HsmDefinitionHeader(), states, null, null, null, null, null);
             
             ref readonly var state = ref blob.GetState(0);
             Assert.Equal(999, state.ParentIndex);
@@ -39,8 +38,8 @@ namespace Fhsm.Tests.Data
         [Fact]
         public void Blob_Indexed_Access_Throws_OutOfRange()
         {
-            var blob = new HsmDefinitionBlob();
-            blob.States = new StateDef[1];
+            var states = new StateDef[1];
+            var blob = new HsmDefinitionBlob(new HsmDefinitionHeader(), states, null, null, null, null, null);
             
             Assert.Throws<IndexOutOfRangeException>(() => blob.GetState(1));
             Assert.Throws<IndexOutOfRangeException>(() => blob.GetState(-1));
@@ -103,8 +102,8 @@ namespace Fhsm.Tests.Data
         [Fact]
         public void InstanceManager_SelectTier_Logic_Tier1()
         {
-            var blob = new HsmDefinitionBlob();
-            blob.States = new StateDef[8]; // <= 8
+            var states = new StateDef[8];
+            var blob = new HsmDefinitionBlob(new HsmDefinitionHeader(), states, null, null, null, null, null);
             blob.Header.RegionCount = 1;   // <= 1
             // Depth/History defaults are 0
             
@@ -115,8 +114,8 @@ namespace Fhsm.Tests.Data
         [Fact]
         public void InstanceManager_SelectTier_Logic_Tier2()
         {
-            var blob = new HsmDefinitionBlob();
-            blob.States = new StateDef[9]; // > 8, <= 32
+            var states = new StateDef[9];
+            var blob = new HsmDefinitionBlob(new HsmDefinitionHeader(), states, null, null, null, null, null);
             blob.Header.RegionCount = 1;
             
             int tier = HsmInstanceManager.SelectTier(blob);
@@ -126,8 +125,8 @@ namespace Fhsm.Tests.Data
         [Fact]
         public void InstanceManager_SelectTier_Logic_Tier3()
         {
-            var blob = new HsmDefinitionBlob();
-            blob.States = new StateDef[33]; // > 32
+            var states = new StateDef[33];
+            var blob = new HsmDefinitionBlob(new HsmDefinitionHeader(), states, null, null, null, null, null);
             
             int tier = HsmInstanceManager.SelectTier(blob);
             Assert.Equal(256, tier);
@@ -301,10 +300,10 @@ namespace Fhsm.Tests.Data
         [Fact]
         public void Validator_Validates_Good_Blob()
         {
-            var blob = new HsmDefinitionBlob();
+            var states = new StateDef[1];
+            states[0].ParentIndex = 0xFFFF; // Root
+            var blob = new HsmDefinitionBlob(new HsmDefinitionHeader(), states, null, null, null, null, null);
             blob.Header.Magic = HsmDefinitionHeader.MagicNumber;
-            blob.States = new StateDef[1];
-            blob.States[0].ParentIndex = 0xFFFF; // Root
             
             bool valid = HsmValidator.ValidateDefinition(blob, out var err);
             Assert.True(valid, err);
@@ -314,7 +313,7 @@ namespace Fhsm.Tests.Data
         public void Validator_Catches_Bad_Magic()
         {
             var blob = new HsmDefinitionBlob();
-            // Magic 0
+            // Magic 0 by default, so invalid
             bool valid = HsmValidator.ValidateDefinition(blob, out var err);
             Assert.False(valid);
             Assert.Contains("Magic", err);
@@ -323,10 +322,10 @@ namespace Fhsm.Tests.Data
         [Fact]
         public void Validator_Catches_Bad_Root()
         {
-            var blob = new HsmDefinitionBlob();
+            var states = new StateDef[1];
+            states[0].ParentIndex = 1; // Invalid for root
+            var blob = new HsmDefinitionBlob(new HsmDefinitionHeader(), states, null, null, null, null, null);
             blob.Header.Magic = HsmDefinitionHeader.MagicNumber;
-            blob.States = new StateDef[1];
-            blob.States[0].ParentIndex = 1; // Invalid for root
             
             bool valid = HsmValidator.ValidateDefinition(blob, out var err);
             Assert.False(valid);
@@ -336,11 +335,11 @@ namespace Fhsm.Tests.Data
         [Fact]
         public void Validator_Validates_Instance()
         {
-            var blob = new HsmDefinitionBlob();
+            var states = new StateDef[1];
+            states[0].ParentIndex = 0xFFFF;
+            var blob = new HsmDefinitionBlob(new HsmDefinitionHeader(), states, null, null, null, null, null);
             blob.Header.StructureHash = 0x1234;
             // Must have at least one state (Root) for instance to be valid (it init to 0)
-            blob.States = new StateDef[1];
-            blob.States[0].ParentIndex = 0xFFFF;
             
             unsafe
             {
@@ -364,8 +363,8 @@ namespace Fhsm.Tests.Data
         public void Blob_Empty_Works()
         {
             var blob = new HsmDefinitionBlob();
-            Assert.Equal(0, blob.StateSpan.Length);
-            Assert.Equal(0, blob.TransitionSpan.Length);
+            Assert.Equal(0, blob.States.Length);
+            Assert.Equal(0, blob.Transitions.Length);
         }
         
         [Fact]
