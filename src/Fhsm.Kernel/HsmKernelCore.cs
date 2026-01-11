@@ -9,6 +9,13 @@ namespace Fhsm.Kernel
     /// </summary>
     internal static unsafe class HsmKernelCore
     {
+        private static HsmTraceBuffer? _traceBuffer = null;
+
+        public static void SetTraceBuffer(HsmTraceBuffer? buffer)
+        {
+            _traceBuffer = buffer;
+        }
+
         // Event ID for Timer Fired (System Reserved)
         private const ushort TimerEventId = 0xFFFE;
 
@@ -182,6 +189,16 @@ namespace Fhsm.Kernel
                 
                 eventsProcessed++;
                 
+                // Trace event handled
+                if (_traceBuffer != null && (header->Flags & InstanceFlags.DebugTrace) != 0)
+                {
+                    byte result = 0; // 0=consumed
+                    if ((evt.Flags & EventFlags.IsDeferred) != 0)
+                        result = 1; // 1=deferred
+                    
+                    _traceBuffer.WriteEventHandled(header->MachineId, evt.EventId, result);
+                }
+
                 if ((evt.Flags & EventFlags.IsDeferred) != 0)
                 {
                     // Re-enqueue deferred event with Low priority
@@ -361,7 +378,18 @@ namespace Fhsm.Kernel
         
         private static bool EvaluateGuard(ushort guardId, byte* instancePtr, void* contextPtr, ushort eventId)
         {
-            return HsmActionDispatcher.EvaluateGuard(guardId, instancePtr, contextPtr, eventId);
+            bool result = HsmActionDispatcher.EvaluateGuard(guardId, instancePtr, contextPtr, eventId);
+
+            if (_traceBuffer != null)
+            {
+                InstanceHeader* header = (InstanceHeader*)instancePtr;
+                if ((header->Flags & InstanceFlags.DebugTrace) != 0)
+                {
+                    _traceBuffer.WriteGuardEvaluated(header->MachineId, guardId, result, 0);
+                }
+            }
+
+            return result;
         }
 
         // --- Transition Execution Logic (BATCH-10) ---
@@ -381,10 +409,26 @@ namespace Fhsm.Kernel
             // Compute LCA path
             TransitionPath path = ComputeLCA(definition, sourceStateId, targetStateId);
             
+            InstanceHeader* header = (InstanceHeader*)instancePtr;
+            if (_traceBuffer != null && (header->Flags & InstanceFlags.DebugTrace) != 0)
+            {
+                _traceBuffer.WriteTransition(
+                    header->MachineId,
+                    transition.SourceStateIndex,
+                    transition.TargetStateIndex,
+                    transition.EventId);
+            }
+            
             // 1. Execute exit actions (leaf -> LCA)
             for (int i = 0; i < path.ExitCount; i++)
             {
                 ushort stateId = path.ExitPath[i];
+                
+                if (_traceBuffer != null && (header->Flags & InstanceFlags.DebugTrace) != 0)
+                {
+                    _traceBuffer.WriteStateChange(header->MachineId, stateId, false);
+                }
+
                 ref readonly var state = ref definition.GetState(stateId);
                 
                 if (state.OnExitActionId != 0 && state.OnExitActionId != 0xFFFF)
@@ -411,6 +455,12 @@ namespace Fhsm.Kernel
             for (int i = 0; i < path.EntryCount; i++)
             {
                 ushort stateId = path.EntryPath[i];
+                
+                if (_traceBuffer != null && (header->Flags & InstanceFlags.DebugTrace) != 0)
+                {
+                    _traceBuffer.WriteStateChange(header->MachineId, stateId, true);
+                }
+
                 ref readonly var state = ref definition.GetState(stateId);
                 
                 // Check if history state
@@ -451,6 +501,15 @@ namespace Fhsm.Kernel
             void* contextPtr,
             ushort eventId)
         {
+            if (_traceBuffer != null)
+            {
+                InstanceHeader* header = (InstanceHeader*)instancePtr;
+                if ((header->Flags & InstanceFlags.DebugTrace) != 0)
+                {
+                    _traceBuffer.WriteActionExecuted(header->MachineId, actionId);
+                }
+            }
+
             HsmActionDispatcher.ExecuteAction(actionId, instancePtr, contextPtr, eventId);
         }
 

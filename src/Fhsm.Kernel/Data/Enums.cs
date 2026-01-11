@@ -93,7 +93,7 @@ namespace Fhsm.Kernel.Data
         Terminated = 1 << 4,            // Reached final state
         Error = 1 << 5,                 // Unrecoverable error
         
-        Reserved6 = 1 << 6,
+        DebugTrace = 1 << 6,            // Enable tracing for this instance
         Reserved7 = 1 << 7,
     }
 
