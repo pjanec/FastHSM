@@ -1,15 +1,13 @@
 using Raylib_cs;
 using System.Numerics;
 using System.Collections.Generic;
-using Fbt.Serialization;
+using Fhsm.Kernel.Data;
 
 namespace Fhsm.Demo.Visual
 {
     public class RenderSystem
     {
-        private IAgentStatusProvider _statusProvider = new DefaultStatusProvider();
-        
-        public void RenderAgents(List<Agent> agents, Agent? selectedAgent, Dictionary<string, BehaviorTreeBlob> trees, float currentTime)
+        public void RenderAgents(List<Agent> agents, Agent? selectedAgent, Dictionary<string, HsmDefinitionBlob> machines, float currentTime)
         {
             foreach (var agent in agents)
             {
@@ -52,12 +50,13 @@ namespace Fhsm.Demo.Visual
                         Raylib.ColorAlpha(Color.Yellow, alpha / 255f));
                 }
                 
-                // NEW: Render status label above agent
-                if (trees.TryGetValue(agent.TreeName, out var blob))
+                // Render simple agent ID label
+                var labelLines = new List<(string, Color)>
                 {
-                    var statusLines = _statusProvider.GetAgentStatus(agent, blob, currentTime);
-                    RenderAgentLabel(agent.Position, statusLines, agent == selectedAgent);
-                }
+                    ($"Agent {agent.Id}", Color.White),
+                    ($"{agent.Role}", Color.LightGray)
+                };
+                RenderAgentLabel(agent.Position, labelLines, agent == selectedAgent);
             }
         }
         

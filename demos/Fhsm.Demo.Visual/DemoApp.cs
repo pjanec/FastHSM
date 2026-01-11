@@ -1,8 +1,11 @@
 using Raylib_cs;
 using ImGuiNET;
 using rlImGui_cs;
+using System;
 using System.Numerics;
 using System.Collections.Generic;
+using Fhsm.Kernel;
+using Fhsm.Kernel.Data;
 
 namespace Fhsm.Demo.Visual
 {
@@ -12,7 +15,7 @@ namespace Fhsm.Demo.Visual
         private const int ScreenHeight = 720;
 
         private List<Agent> _agents = new();
-        private Dictionary<string, BehaviorTreeBlob> _trees = new();
+        private Dictionary<string, HsmDefinitionBlob> _machines = new();
         private BehaviorSystem _behaviorSystem = null!;
         private RenderSystem _renderSystem = null!;
         
@@ -21,13 +24,14 @@ namespace Fhsm.Demo.Visual
         private float _timeScale = 1.0f;
         
         private Agent? _selectedAgent = null;
-        private UI.TreeVisualPanel _treeVisualPanel = new UI.TreeVisualPanel();
+        private UI.StateMachineVisualizer _smVisualizer = new UI.StateMachineVisualizer();
+        private Random _random = new Random();
 
         private Camera2D _camera;
         
         public void Run()
         {
-            Raylib.InitWindow(ScreenWidth, ScreenHeight, "FastBTree Visual Demo");
+            Raylib.InitWindow(ScreenWidth, ScreenHeight, "FastHSM Visual Demo");
             Raylib.SetTargetFPS(60);
             rlImGui.Setup(true);
             
@@ -57,18 +61,70 @@ namespace Fhsm.Demo.Visual
 
         private void Initialize()
         {
-            // Load behavior trees
-            _trees["patrol"] = LoadTree("Trees/patrol.json");
-            _trees["gather"] = LoadTree("Trees/gather.json");
-            _trees["combat"] = LoadTree("Trees/combat.json");
-            
+            // Register actions
+            Fhsm.Demo.Visual.Generated.HsmActionRegistrar.RegisterAll();
+
             // Create systems
-            _behaviorSystem = new BehaviorSystem(_trees);
+            _behaviorSystem = new BehaviorSystem();
             _renderSystem = new RenderSystem();
+            
+            // Get machines
+            _machines = _behaviorSystem.GetMachines();
             
             // Spawn initial agents
             SpawnPatrolAgents(5);
             SpawnGatherAgents(3);
+            SpawnCombatAgents(2);
+        }
+        
+        private Vector2 GetRandomPosition()
+        {
+            return new Vector2(_random.Next(100, 1180), _random.Next(100, 620));
+        }
+        
+        private void SpawnPatrolAgents(int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                var agent = new Agent(
+                    _agents.Count,
+                    GetRandomPosition(),
+                    "patrol",
+                    AgentRole.Patrol);
+                
+                _behaviorSystem.InitializeAgent(agent);
+                _agents.Add(agent);
+            }
+        }
+        
+        private void SpawnGatherAgents(int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                var agent = new Agent(
+                    _agents.Count,
+                    GetRandomPosition(),
+                    "gather",
+                    AgentRole.Gather);
+                
+                _behaviorSystem.InitializeAgent(agent);
+                _agents.Add(agent);
+            }
+        }
+        
+        private void SpawnCombatAgents(int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                var agent = new Agent(
+                    _agents.Count,
+                    GetRandomPosition(),
+                    "combat",
+                    AgentRole.Combat);
+                
+                _behaviorSystem.InitializeAgent(agent);
+                _agents.Add(agent);
+            }
         }
         
 
@@ -145,7 +201,7 @@ namespace Fhsm.Demo.Visual
             Raylib.DrawRectangleLines(0, 0, ScreenWidth, ScreenHeight, Color.Gray);
             
             // Render world
-            _renderSystem.RenderAgents(_agents, _selectedAgent, _trees, _time);
+            _renderSystem.RenderAgents(_agents, _selectedAgent, _machines, _time);
             
             Raylib.EndMode2D();
             
@@ -211,10 +267,10 @@ namespace Fhsm.Demo.Visual
             // Selected agent details
             if (_selectedAgent != null)
             {
-               if (_trees.TryGetValue(_selectedAgent.TreeName, out var blob))
-               {
-                    _treeVisualPanel.Render(_selectedAgent, blob, _time);
-               }
+                if (_machines.TryGetValue(_selectedAgent.MachineName, out var blob))
+                {
+                    _smVisualizer.Render(_selectedAgent, blob, _time);
+                }
             }
         }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Fhsm.Kernel;
 using Fhsm.Kernel.Attributes;
 using Fhsm.Kernel.Data;
@@ -60,8 +61,20 @@ namespace Fhsm.Examples.Console
         {
             System.Console.WriteLine("=== Traffic Light State Machine ===\n");
             
+             // Default namespace for generator is <Assembly>.Generated
+            Fhsm.Examples.Console.Generated.HsmActionRegistrar.RegisterAll();
+            
             // 1. Build state machine
             var builder = new HsmBuilder("TrafficLight");
+
+            // Register Events & Actions (Required for validation)
+            builder.Event("TimerExpired", TimerExpiredEvent);
+            
+            builder.RegisterAction("OnEnterRed")
+                   .RegisterAction("OnExitRed")
+                   .RegisterAction("RedActivity")
+                   .RegisterAction("OnEnterGreen")
+                   .RegisterAction("OnEnterYellow");
             
             // Define states
             var red = builder.State("Red")
@@ -87,9 +100,10 @@ namespace Fhsm.Examples.Console
             var graph = builder.Build();
             HsmNormalizer.Normalize(graph);
             
-            if (!HsmGraphValidator.Validate(graph, out var errors))
+            var errors = HsmGraphValidator.Validate(graph);
+            if (errors.Count > 0)
             {
-                System.Console.WriteLine($"Validation failed: {string.Join(", ", errors)}");
+                System.Console.WriteLine($"Validation failed: {string.Join(", ", errors.Select(e => e.Message))}");
                 return;
             }
             

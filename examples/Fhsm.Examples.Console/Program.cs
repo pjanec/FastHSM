@@ -12,8 +12,8 @@ namespace Fhsm.Examples.Console
             
             TrafficLightExample.Run();
             
-            System.Console.WriteLine("\nPress any key to exit...");
-            System.Console.ReadKey();
+            //System.Console.WriteLine("\nPress any key to exit...");
+            //System.Console.ReadKey();
         }
     }
 }

@@ -1,10 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Raylib_cs;
-using Fbt;
-using Fbt.Runtime;
+using Fhsm.Kernel;
+using Fhsm.Kernel.Data;
 
-namespace Fbt.Demo.Visual
+namespace Fhsm.Demo.Visual
 {
     public class Agent
     {
@@ -14,10 +15,10 @@ namespace Fbt.Demo.Visual
         public float Rotation { get; set; }
         public Color Color { get; set; }
         
-        // Behavior tree
-        public string TreeName;
-        public AgentBlackboard Blackboard = new AgentBlackboard(); 
-        public BehaviorTreeState State;
+        // State machine
+        public string MachineName;
+        public unsafe HsmInstance64 Instance;
+        public AgentContext Context;
         
         // AI state
         public Vector2 TargetPosition;
@@ -25,17 +26,18 @@ namespace Fbt.Demo.Visual
         public AgentRole Role;
         
         // Visual state
-        public TreeExecutionHighlight? CurrentNode;
+        public ushort[] ActiveStates = Array.Empty<ushort>();
+        public List<TransitionRecord> RecentTransitions = new();
         public float AttackFlashTimer;  // Timer for attack visual effect
         
-        public Agent(int id, Vector2 position, string treeName, AgentRole role)
+        public Agent(int id, Vector2 position, string machineName, AgentRole role)
         {
             Id = id;
             Position = position;
-            TreeName = treeName;
+            MachineName = machineName;
             Role = role;
-            // Blackboard is struct, already initialized
-            State = new BehaviorTreeState();
+            Context = new AgentContext { AgentId = id };
+            // Instance will be initialized by BehaviorSystem
             
             Color = role switch
             {
@@ -75,19 +77,37 @@ namespace Fbt.Demo.Visual
         Combat
     }
     
-    public struct AgentBlackboard
+    public struct AgentContext
     {
+        // Patrol
         public int PatrolPointIndex;
         public float LastPatrolTime;
+        
+        // Gather
         public int ResourceCount;
+        public Vector2 ResourcePosition;
+        public Vector2 BasePosition;
+        
+        // Combat
         public bool HasTarget;
-        public int TargetAgentId;  // Which agent we're chasing (-1 if none)
+        public int TargetAgentId;
+        public Vector2 TargetPosition;
+        
+        // Shared
+        public float DistanceToTarget;
+        public float DistanceToBase;
+        public float Time;
+        public float DeltaTime;
+        
+        // Agent ID for lookup (no managed reference)
+        public int AgentId;
     }
     
-    public struct TreeExecutionHighlight
+    public struct TransitionRecord
     {
-        public int NodeIndex;
-        public NodeStatus Status;
+        public ushort FromState;
+        public ushort ToState;
+        public ushort EventId;
         public float Timestamp;
     }
 }

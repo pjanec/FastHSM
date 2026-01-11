@@ -1,4 +1,4 @@
-﻿namespace Fbt.Demo.Visual
+﻿namespace Fhsm.Demo.Visual
 {
     public class Program
     {

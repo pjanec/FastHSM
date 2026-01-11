@@ -81,18 +81,8 @@ namespace Fhsm.Tests.Examples
             var instance = new HsmInstance64();
             HsmInstanceManager.Initialize(&instance, blob);
             
-            // Register actios
-            // Compute hashes
-            ushort entryId = ComputeHash("TestEntry");
-            ushort exitId = ComputeHash("TestExit");
-            ushort activityId = ComputeHash("TestActivity");
-            ushort transitionId = ComputeHash("TestTransition");
-            
-            // Register
-            Fhsm.Kernel.HsmActionDispatcher.RegisterAction(entryId, Fhsm.Tests.Generated.HsmActionDispatcher.GetAction(entryId));
-            Fhsm.Kernel.HsmActionDispatcher.RegisterAction(exitId, Fhsm.Tests.Generated.HsmActionDispatcher.GetAction(exitId));
-            Fhsm.Kernel.HsmActionDispatcher.RegisterAction(activityId, Fhsm.Tests.Generated.HsmActionDispatcher.GetAction(activityId));
-            Fhsm.Kernel.HsmActionDispatcher.RegisterAction(transitionId, Fhsm.Tests.Generated.HsmActionDispatcher.GetAction(transitionId));
+            // Register actions
+            Fhsm.Tests.Generated.HsmActionRegistrar.RegisterAll();
             
             // Run
             int context = 0;
