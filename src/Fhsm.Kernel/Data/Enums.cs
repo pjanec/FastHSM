@@ -98,4 +98,21 @@ namespace Fhsm.Kernel.Data
         Reserved6 = 1 << 6,
         Reserved7 = 1 << 7,
     }
+
+    /// <summary>
+    /// Event flags (8 bits).
+    /// </summary>
+    [Flags]
+    public enum EventFlags : byte
+    {
+        None = 0,
+        IsDeferred = 1 << 0,        // Event is deferred
+        IsIndirect = 1 << 1,        // Payload contains ID, not data
+        IsConsumed = 1 << 2,        // Event has been consumed
+        Reserved3 = 1 << 3,
+        Reserved4 = 1 << 4,
+        Reserved5 = 1 << 5,
+        Reserved6 = 1 << 6,
+        Reserved7 = 1 << 7,
+    }
 }
