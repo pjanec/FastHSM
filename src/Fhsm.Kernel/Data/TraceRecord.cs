@@ -20,6 +20,7 @@ namespace Fhsm.Kernel.Data
         ActivityEnded = 0x08,     // Activity ended
         TimerSet = 0x09,          // Timer was set
         TimerFired = 0x0A,        // Timer fired
+        Error = 0xFF,             // Critical error
     }
     
     /// <summary>
@@ -127,5 +128,41 @@ namespace Fhsm.Kernel.Data
         [FieldOffset(0)] public TraceRecordHeader Header;
         [FieldOffset(8)] public ushort ActionId;
         [FieldOffset(10)] public ushort Reserved;
+    }
+
+    /// <summary>
+    /// Critical error trace record (12 bytes).
+    /// OpCode: Error (0xFF)
+    /// </summary>
+    [StructLayout(LayoutKind.Explicit, Size = 12)]
+    public struct TraceError
+    {
+        [FieldOffset(0)] public TraceRecordHeader Header;
+        [FieldOffset(8)] public ushort ErrorCode;
+        [FieldOffset(10)] public ushort Reserved;
+    }
+
+    /// <summary>
+    /// Unified trace record for symbolication (Union of all types).
+    /// </summary>
+    [StructLayout(LayoutKind.Explicit, Size = 16)]
+    public struct TraceRecord
+    {
+        // Header
+        [FieldOffset(0)] public TraceOpCode OpCode;
+        [FieldOffset(2)] public ushort Timestamp;
+        [FieldOffset(4)] public uint InstanceId;
+
+        // Fields (Overlapping)
+        [FieldOffset(8)] public ushort StateIndex;      // Enter/Exit/Transition(From)
+        [FieldOffset(8)] public ushort EventId;         // EventHandled
+        [FieldOffset(8)] public ushort ActionId;        // ActionExecuted
+        [FieldOffset(8)] public ushort GuardId;         // GuardEvaluated
+        [FieldOffset(8)] public ushort ErrorCode;       // Error
+        
+        [FieldOffset(10)] public ushort TargetStateIndex; // Transition(To)
+        [FieldOffset(10)] public byte GuardResult;        // GuardEvaluated
+        
+        [FieldOffset(12)] public ushort TriggerEventId; // Transition(Trigger)
     }
 }

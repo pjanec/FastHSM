@@ -7,10 +7,17 @@ namespace Fhsm.Compiler
 {
     public class HsmGraphValidator
     {
+        public enum ErrorSeverity
+        {
+            Error,
+            Warning
+        }
+
         public class ValidationError
         {
             public string Message { get; set; }
             public string? StateName { get; set; }
+            public ErrorSeverity Severity { get; set; } = ErrorSeverity.Error;
             
             public ValidationError(string message, string? stateName = null)
             {
@@ -19,7 +26,7 @@ namespace Fhsm.Compiler
             }
             
             public override string ToString() => 
-                StateName != null ? $"[{StateName}] {Message}" : Message;
+                StateName != null ? $"[{StateName}] {Severity}: {Message}" : $"{Severity}: {Message}";
         }
         
         /// <summary>
@@ -42,8 +49,35 @@ namespace Fhsm.Compiler
             ValidateHistoryStates(graph, errors);
             ValidateFunctions(graph, errors);
             ValidateLimits(graph, errors);
+            ValidateIndirectEvents(graph, errors);
             
             return errors;
+        }
+
+        private static void ValidateIndirectEvents(StateMachineGraph graph, List<ValidationError> errors)
+        {
+            foreach (var evt in graph.Events)
+            {
+                if (evt.PayloadSize > 16)
+                {
+                    if (!evt.IsIndirect)
+                    {
+                        errors.Add(new ValidationError(
+                            $"Event '{evt.Name}' has payload {evt.PayloadSize}B (>16B) but not marked IsIndirect. " +
+                            "Large events must be ID-only (use IsIndirect=true).")
+                        { Severity = ErrorSeverity.Error });
+                    }
+                }
+                
+                // Warn if deferred + indirect (can't defer ID-only events)
+                if (evt.IsIndirect && evt.IsDeferred)
+                {
+                    errors.Add(new ValidationError(
+                        $"Event '{evt.Name}' is both IsIndirect and IsDeferred. " +
+                        "ID-only events cannot be deferred (data not in queue).")
+                    { Severity = ErrorSeverity.Warning });
+                }
+            }
         }
         
         private static void ValidateStructure(StateMachineGraph graph, List<ValidationError> errors)

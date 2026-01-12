@@ -361,8 +361,24 @@ namespace Fhsm.Kernel
             ushort* activeLeafIds = GetActiveLeafIds(instancePtr, instanceSize, out int regionCount);
             
             int iteration = 0;
-            while (iteration < MaxRTCIterations)
+            while (true)
             {
+                if (iteration >= MaxRTCIterations)
+                {
+                    // Fail-Safe: Infinite loop detected
+                     if (_traceBuffer != null)
+                    {
+                        _traceBuffer.WriteError(header->MachineId, 1); // Error 1: RTC Loop
+                    }
+                    
+                    // Reset to 0xFFFF (Safe State)
+                    for (int i = 0; i < regionCount; i++) activeLeafIds[i] = 0xFFFF;
+                    
+                    // Force phase to Idle to stop processing
+                    header->Phase = InstancePhase.Idle;
+                    return;
+                }
+
                 iteration++;
 
                 TransitionDef? selectedTransition = SelectTransition(
@@ -381,8 +397,6 @@ namespace Fhsm.Kernel
                 }
                 
                 ExecuteTransition(definition, instancePtr, instanceSize, selectedTransition.Value, activeLeafIds, regionCount, contextPtr, ref cmdWriter);
-                
-                // Break after one transition per event (Standard Run-to-Completion step)
                 break;
             }
             

@@ -17,6 +17,7 @@ namespace Fhsm.Compiler.Graph
         
         // Event definitions
         public Dictionary<string, ushort> EventNameToId { get; } = new();
+        public List<EventDefinition> Events { get; } = new();
         
         // Function registrations
         public HashSet<string> RegisteredActions { get; } = new();

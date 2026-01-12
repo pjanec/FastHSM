@@ -163,6 +163,28 @@ namespace Fhsm.Kernel
         }
         
         /// <summary>
+        /// Write an error trace record.
+        /// </summary>
+        public void WriteError(uint instanceId, ushort errorCode)
+        {
+            // Errors are always logged, ignore filter? Or maybe separate flag?
+            // Assuming errors are critical and always logged if buffer exists.
+            
+            var record = new TraceError
+            {
+                Header = new TraceRecordHeader
+                {
+                    OpCode = TraceOpCode.Error,
+                    Timestamp = _currentTick,
+                    InstanceId = instanceId
+                },
+                ErrorCode = errorCode
+            };
+            
+            WriteRecord(ref record, sizeof(TraceError));
+        }
+
+        /// <summary>
         /// Read all trace records from the buffer.
         /// Returns a span view (zero-copy).
         /// </summary>

@@ -24,9 +24,15 @@ namespace Fhsm.Compiler
             return new StateBuilder(state, _graph);
         }
         
-        public HsmBuilder Event(string eventName, ushort eventId)
+        public HsmBuilder Event(string eventName, ushort eventId, int payloadSize = 0, bool isIndirect = false, bool isDeferred = false)
         {
             _graph.EventNameToId[eventName] = eventId;
+            _graph.Events.Add(new EventDefinition(eventName, eventId)
+            {
+                PayloadSize = payloadSize,
+                IsIndirect = isIndirect,
+                IsDeferred = isDeferred
+            });
             return this;
         }
         
