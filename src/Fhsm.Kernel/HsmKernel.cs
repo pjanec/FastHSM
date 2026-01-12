@@ -23,11 +23,29 @@ namespace Fhsm.Kernel
             where TInstance : unmanaged
             where TContext : unmanaged
         {
+            var dummyPage = new CommandPage();
+            UpdateBatch(definition, instances, context, deltaTime, ref dummyPage);
+        }
+
+        /// <summary>
+        /// Process batch of instances through one tick (with Command Buffer).
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe void UpdateBatch<TInstance, TContext>(
+            HsmDefinitionBlob definition,
+            Span<TInstance> instances,
+            in TContext context,
+            float deltaTime,
+            ref CommandPage commandPage)
+            where TInstance : unmanaged
+            where TContext : unmanaged
+        {
             if (instances.Length == 0) return;
             
             // Pin and get pointers
             fixed (TInstance* instPtr = instances)
             fixed (TContext* ctxPtr = &context)
+            fixed (CommandPage* cmdPtr = &commandPage)
             {
                 // Call non-generic core
                 HsmKernelCore.UpdateBatchCore(
@@ -36,7 +54,8 @@ namespace Fhsm.Kernel
                     instances.Length,
                     sizeof(TInstance),
                     ctxPtr,
-                    deltaTime);
+                    deltaTime,
+                    cmdPtr);
             }
         }
         
@@ -52,8 +71,26 @@ namespace Fhsm.Kernel
             where TInstance : unmanaged
             where TContext : unmanaged
         {
+            var dummyPage = new CommandPage();
+            Update(definition, ref instance, context, deltaTime, ref dummyPage);
+        }
+
+        /// <summary>
+        /// Overload for single instance (with Command Buffer).
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe void Update<TInstance, TContext>(
+            HsmDefinitionBlob definition,
+            ref TInstance instance,
+            in TContext context,
+            float deltaTime,
+            ref CommandPage commandPage)
+            where TInstance : unmanaged
+            where TContext : unmanaged
+        {
             fixed (TInstance* instPtr = &instance)
             fixed (TContext* ctxPtr = &context)
+            fixed (CommandPage* cmdPtr = &commandPage)
             {
                 HsmKernelCore.UpdateBatchCore(
                     definition,
@@ -61,7 +98,8 @@ namespace Fhsm.Kernel
                     1,
                     sizeof(TInstance),
                     ctxPtr,
-                    deltaTime);
+                    deltaTime,
+                    cmdPtr);
             }
         }
         

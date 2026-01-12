@@ -30,7 +30,7 @@ namespace Fhsm.Demo.Visual
         // ==================== PATROL ACTIONS ====================
         
         [HsmAction(Name = "FindPatrolPoint")]
-        public static void FindPatrolPoint(void* instance, void* context, ushort eventId)
+        public static void FindPatrolPoint(void* instance, void* context, HsmCommandWriter* writer)
         {
             var ctx = (AgentContext*)context;
             var agent = GetAgent(ctx);
@@ -50,7 +50,7 @@ namespace Fhsm.Demo.Visual
         }
         
         [HsmAction(Name = "MoveToTarget")]
-        public static void MoveToTarget(void* instance, void* context, ushort eventId)
+        public static void MoveToTarget(void* instance, void* context, HsmCommandWriter* writer)
         {
             var ctx = (AgentContext*)context;
             var agent = GetAgent(ctx);
@@ -73,7 +73,7 @@ namespace Fhsm.Demo.Visual
         // ==================== GATHER ACTIONS ====================
         
         [HsmAction(Name = "FindResource")]
-        public static void FindResource(void* instance, void* context, ushort eventId)
+        public static void FindResource(void* instance, void* context, HsmCommandWriter* writer)
         {
             var ctx = (AgentContext*)context;
             var agent = GetAgent(ctx);
@@ -91,7 +91,7 @@ namespace Fhsm.Demo.Visual
         }
         
         [HsmAction(Name = "MoveToResource")]
-        public static void MoveToResource(void* instance, void* context, ushort eventId)
+        public static void MoveToResource(void* instance, void* context, HsmCommandWriter* writer)
         {
             var ctx = (AgentContext*)context;
             var agent = GetAgent(ctx);
@@ -109,7 +109,7 @@ namespace Fhsm.Demo.Visual
         }
         
         [HsmAction(Name = "Gather")]
-        public static void Gather(void* instance, void* context, ushort eventId)
+        public static void Gather(void* instance, void* context, HsmCommandWriter* writer)
         {
             var ctx = (AgentContext*)context;
             var agent = GetAgent(ctx);
@@ -123,7 +123,7 @@ namespace Fhsm.Demo.Visual
         }
         
         [HsmAction(Name = "MoveToBase")]
-        public static void MoveToBase(void* instance, void* context, ushort eventId)
+        public static void MoveToBase(void* instance, void* context, HsmCommandWriter* writer)
         {
             var ctx = (AgentContext*)context;
             var agent = GetAgent(ctx);
@@ -145,7 +145,7 @@ namespace Fhsm.Demo.Visual
         }
         
         [HsmAction(Name = "DepositResources")]
-        public static void DepositResources(void* instance, void* context, ushort eventId)
+        public static void DepositResources(void* instance, void* context, HsmCommandWriter* writer)
         {
             var ctx = (AgentContext*)context;
             var agent = GetAgent(ctx);
@@ -161,7 +161,7 @@ namespace Fhsm.Demo.Visual
         // ==================== COMBAT ACTIONS ====================
         
         [HsmAction(Name = "FindRandomPoint")]
-        public static void FindRandomPoint(void* instance, void* context, ushort eventId)
+        public static void FindRandomPoint(void* instance, void* context, HsmCommandWriter* writer)
         {
             var ctx = (AgentContext*)context;
             var agent = GetAgent(ctx);
@@ -178,14 +178,14 @@ namespace Fhsm.Demo.Visual
         }
         
         [HsmAction(Name = "ScanForEnemy")]
-        public static void ScanForEnemy(void* instance, void* context, ushort eventId)
+        public static void ScanForEnemy(void* instance, void* context, HsmCommandWriter* writer)
         {
             // This is handled by BehaviorSystem.UpdateCombatScanning()
             // which injects EnemyDetected events
         }
         
         [HsmAction(Name = "ChaseEnemy")]
-        public static void ChaseEnemy(void* instance, void* context, ushort eventId)
+        public static void ChaseEnemy(void* instance, void* context, HsmCommandWriter* writer)
         {
             var ctx = (AgentContext*)context;
             var agent = GetAgent(ctx);
@@ -217,7 +217,7 @@ namespace Fhsm.Demo.Visual
         }
         
         [HsmAction(Name = "Attack")]
-        public static void Attack(void* instance, void* context, ushort eventId)
+        public static void Attack(void* instance, void* context, HsmCommandWriter* writer)
         {
             var ctx = (AgentContext*)context;
             var agent = GetAgent(ctx);

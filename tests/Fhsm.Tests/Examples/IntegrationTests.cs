@@ -15,25 +15,25 @@ namespace Fhsm.Tests.Examples
         private static int _transitionCount = 0;
         
         [HsmAction(Name = "TestEntry")]
-        internal static void TestEntry(void* instance, void* context, ushort eventId)
+        internal static void TestEntry(void* instance, void* context, HsmCommandWriter* writer)
         {
             _entryCount++;
         }
         
         [HsmAction(Name = "TestExit")]
-        internal static void TestExit(void* instance, void* context, ushort eventId)
+        internal static void TestExit(void* instance, void* context, HsmCommandWriter* writer)
         {
             _exitCount++;
         }
         
         [HsmAction(Name = "TestActivity")]
-        internal static void TestActivity(void* instance, void* context, ushort eventId)
+        internal static void TestActivity(void* instance, void* context, HsmCommandWriter* writer)
         {
             _activityCount++;
         }
         
         [HsmAction(Name = "TestTransition")]
-        internal static void TestTransition(void* instance, void* context, ushort eventId)
+        internal static void TestTransition(void* instance, void* context, HsmCommandWriter* writer)
         {
             _transitionCount++;
         }

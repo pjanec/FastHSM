@@ -63,7 +63,7 @@
 
 ### P0 - Critical (Blocks Core Functionality)
 - [x] **TASK-G01** Global Transition Checking → [details](GAP-TASKS.md#task-g01-global-transition-checking) *BATCH-16*
-- [ ] **TASK-G02** Command Buffer Integration → [details](GAP-TASKS.md#task-g02-command-buffer-integration)
+- [⚠️] **TASK-G02** Command Buffer Integration → [details](GAP-TASKS.md#task-g02-command-buffer-integration) *BATCH-17 - needs test fixes*
 - [ ] **TASK-G03** Hot Reload Manager → [details](GAP-TASKS.md#task-g03-hot-reload-manager) *(replaces TASK-T01)*
 
 ### P1 - High Priority (Production Readiness)

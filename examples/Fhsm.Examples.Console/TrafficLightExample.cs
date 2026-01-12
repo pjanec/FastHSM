@@ -26,32 +26,32 @@ namespace Fhsm.Examples.Console
         
         // Actions
         [HsmAction(Name = "OnEnterRed")]
-        public static void OnEnterRed(void* instance, void* context, ushort eventId)
+        public static void OnEnterRed(void* instance, void* context, HsmCommandWriter* writer)
         {
             System.Console.WriteLine("🔴 RED - Stop!");
         }
         
         [HsmAction(Name = "OnEnterGreen")]
-        public static void OnEnterGreen(void* instance, void* context, ushort eventId)
+        public static void OnEnterGreen(void* instance, void* context, HsmCommandWriter* writer)
         {
             System.Console.WriteLine("🟢 GREEN - Go!");
         }
         
         [HsmAction(Name = "OnEnterYellow")]
-        public static void OnEnterYellow(void* instance, void* context, ushort eventId)
+        public static void OnEnterYellow(void* instance, void* context, HsmCommandWriter* writer)
         {
             System.Console.WriteLine("🟡 YELLOW - Caution!");
         }
         
         [HsmAction(Name = "OnExitRed")]
-        public static void OnExitRed(void* instance, void* context, ushort eventId)
+        public static void OnExitRed(void* instance, void* context, HsmCommandWriter* writer)
         {
             System.Console.WriteLine("  Exiting Red state...");
         }
         
         // Activity (runs every tick while in state)
         [HsmAction(Name = "RedActivity")]
-        public static void RedActivity(void* instance, void* context, ushort eventId)
+        public static void RedActivity(void* instance, void* context, HsmCommandWriter* writer)
         {
             var ctx = (TrafficLightContext*)context;
             System.Console.WriteLine($"  [Red Activity - Tick {ctx->TickCount}]");

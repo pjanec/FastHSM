@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Xunit;
 using Fhsm.Kernel;
 using Fhsm.Kernel.Attributes;
+using Fhsm.Kernel.Data;
 
 // Define explicit alias for Kernel namespace usage if needed, 
 // but using dynamic namespace separation avoids collision.
@@ -13,13 +14,12 @@ namespace Fhsm.Tests.SourceGen
     {
         private static int _actionCallCount = 0;
         private static int _guardCallCount = 0;
-        private static ushort _lastEventId = 0;
+        // private static ushort _lastEventId = 0; // Removed
 
         [HsmAction(Name = "TestAction")]
-        internal static void TestAction(void* instance, void* context, ushort eventId)
+        internal static void TestAction(void* instance, void* context, HsmCommandWriter* writer)
         {
             _actionCallCount++;
-            _lastEventId = eventId;
         }
 
         [HsmGuard(Name = "TestGuard")]
@@ -30,7 +30,7 @@ namespace Fhsm.Tests.SourceGen
         }
 
         [HsmAction]
-        internal static void ImplicitNameAction(void* instance, void* context, ushort eventId)
+        internal static void ImplicitNameAction(void* instance, void* context, HsmCommandWriter* writer)
         {
             _actionCallCount++;
         }
@@ -54,10 +54,9 @@ namespace Fhsm.Tests.SourceGen
             ushort id = ComputeHash("TestAction");
             
             // Use the KERNEL dispatcher
-            Fhsm.Kernel.HsmActionDispatcher.ExecuteAction(id, null, null, 123);
+            Fhsm.Kernel.HsmActionDispatcher.ExecuteAction(id, null, null, null);
             
             Assert.Equal(1, _actionCallCount);
-            Assert.Equal(123, _lastEventId);
         }
 
         [Fact]
@@ -77,7 +76,7 @@ namespace Fhsm.Tests.SourceGen
         public void Dispatcher_Unknown_Action_Is_Safe()
         {
             // Should not throw or crash
-            Fhsm.Kernel.HsmActionDispatcher.ExecuteAction(9999, null, null, 0);
+            Fhsm.Kernel.HsmActionDispatcher.ExecuteAction(9999, null, null, null);
         }
 
         [Fact]
@@ -96,7 +95,7 @@ namespace Fhsm.Tests.SourceGen
             // Name should be "ImplicitNameAction"
             ushort id = ComputeHash("ImplicitNameAction");
             
-            Fhsm.Kernel.HsmActionDispatcher.ExecuteAction(id, null, null, 0);
+            Fhsm.Kernel.HsmActionDispatcher.ExecuteAction(id, null, null, null);
             Assert.Equal(1, _actionCallCount);
         }
     }

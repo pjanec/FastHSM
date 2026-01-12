@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Fhsm.Kernel.Data;
 
 namespace Fhsm.Kernel
@@ -43,12 +44,15 @@ namespace Fhsm.Kernel
             int instanceCount,
             int instanceSize,
             void* contextPtr,
-            float deltaTime)
+            float deltaTime,
+            void* commandPagePtr)
         {
             if (definition == null) throw new ArgumentNullException(nameof(definition));
             if (instancePtr == null) throw new ArgumentNullException(nameof(instancePtr));
             if (instanceCount <= 0) return;
             
+            var cmdWriter = new HsmCommandWriter((CommandPage*)commandPagePtr, 4080);
+
             // Process each instance
             for (int i = 0; i < instanceCount; i++)
             {
@@ -68,7 +72,8 @@ namespace Fhsm.Kernel
                     instanceSize,
                     contextPtr,
                     deltaTime,
-                    header);
+                    header,
+                    ref cmdWriter);
             }
         }
         
@@ -97,7 +102,8 @@ namespace Fhsm.Kernel
             int instanceSize,
             void* contextPtr,
             float deltaTime,
-            InstanceHeader* header)
+            InstanceHeader* header,
+            ref HsmCommandWriter cmdWriter)
         {
             switch (header->Phase)
             {
@@ -118,7 +124,7 @@ namespace Fhsm.Kernel
                         ushort* activeLeafIds = GetActiveLeafIds(instancePtr, instanceSize, out int regionCount);
                         if (activeLeafIds != null && activeLeafIds[0] == 0xFFFF)
                         {
-                            InitializeMachine(definition, instancePtr, instanceSize, contextPtr, activeLeafIds);
+                            InitializeMachine(definition, instancePtr, instanceSize, contextPtr, activeLeafIds, ref cmdWriter);
                             
                             // Advance to Activity immediately (skip event phase this tick)
                             header->Phase = InstancePhase.Activity;
@@ -126,17 +132,17 @@ namespace Fhsm.Kernel
                         }
                     
                         // Advance to Event processing
-                        ProcessEventPhase(definition, instancePtr, instanceSize, contextPtr);
+                        ProcessEventPhase(definition, instancePtr, instanceSize, contextPtr, ref cmdWriter);
                     }
                     break;
                     
                 case InstancePhase.RTC:
                     ushort eventId = GetCurrentEventId(instancePtr, instanceSize);
-                    ProcessRTCPhase(definition, instancePtr, instanceSize, contextPtr, eventId);
+                    ProcessRTCPhase(definition, instancePtr, instanceSize, contextPtr, eventId, ref cmdWriter);
                     break;
                     
                 case InstancePhase.Activity:
-                    ProcessActivityPhase(definition, instancePtr, instanceSize, contextPtr, deltaTime);
+                    ProcessActivityPhase(definition, instancePtr, instanceSize, contextPtr, deltaTime, ref cmdWriter);
                     break;
             }
         }
@@ -146,7 +152,8 @@ namespace Fhsm.Kernel
             byte* instancePtr,
             int instanceSize,
             void* contextPtr,
-            ushort* activeLeafIds)
+            ushort* activeLeafIds,
+            ref HsmCommandWriter cmdWriter)
         {
             if (definition.Header.StateCount == 0) return;
 
@@ -184,7 +191,7 @@ namespace Fhsm.Kernel
                 // Execute OnEntry
                 if (state.OnEntryActionId != 0 && state.OnEntryActionId != 0xFFFF)
                 {
-                    ExecuteAction(state.OnEntryActionId, instancePtr, contextPtr, 0);
+                    ExecuteAction(state.OnEntryActionId, instancePtr, contextPtr, ref cmdWriter);
                 }
             }
             
@@ -250,7 +257,8 @@ namespace Fhsm.Kernel
             HsmDefinitionBlob definition,
             byte* instancePtr,
             int instanceSize,
-            void* contextPtr)
+            void* contextPtr,
+            ref HsmCommandWriter cmdWriter)
         {
             const int MaxEventsPerTick = 10;
             int eventsProcessed = 0;
@@ -300,7 +308,8 @@ namespace Fhsm.Kernel
             byte* instancePtr,
             int instanceSize,
             void* contextPtr,
-            float deltaTime)
+            float deltaTime,
+            ref HsmCommandWriter cmdWriter)
         {
             InstanceHeader* header = (InstanceHeader*)instancePtr;
             ushort* activeLeafIds = GetActiveLeafIds(instancePtr, instanceSize, out int regionCount);
@@ -320,7 +329,7 @@ namespace Fhsm.Kernel
                     // Execute activity if present
                     if (state.ActivityActionId != 0 && state.ActivityActionId != 0xFFFF)
                     {
-                        ExecuteAction(state.ActivityActionId, instancePtr, contextPtr, 0);
+                        ExecuteAction(state.ActivityActionId, instancePtr, contextPtr, ref cmdWriter);
                     }
                     
                     current = state.ParentIndex;
@@ -338,7 +347,8 @@ namespace Fhsm.Kernel
             byte* instancePtr,
             int instanceSize,
             void* contextPtr,
-            ushort currentEventId)
+            ushort currentEventId,
+            ref HsmCommandWriter cmdWriter)
         {
             const int MaxRTCIterations = 100;
             InstanceHeader* header = (InstanceHeader*)instancePtr;
@@ -364,7 +374,7 @@ namespace Fhsm.Kernel
                     break;
                 }
                 
-                ExecuteTransition(definition, instancePtr, instanceSize, selectedTransition.Value, activeLeafIds, regionCount, contextPtr);
+                ExecuteTransition(definition, instancePtr, instanceSize, selectedTransition.Value, activeLeafIds, regionCount, contextPtr, ref cmdWriter);
                 
                 // Break after one transition per event (Standard Run-to-Completion step)
                 break;
@@ -477,7 +487,8 @@ namespace Fhsm.Kernel
             TransitionDef transition,
             ushort* activeLeafIds,
             int regionCount,
-            void* contextPtr)
+            void* contextPtr,
+            ref HsmCommandWriter cmdWriter)
         {
             ushort sourceStateId = transition.SourceStateIndex;
             ushort targetStateId = transition.TargetStateIndex;
@@ -509,7 +520,7 @@ namespace Fhsm.Kernel
                 
                 if (state.OnExitActionId != 0 && state.OnExitActionId != 0xFFFF)
                 {
-                    ExecuteAction(state.OnExitActionId, instancePtr, contextPtr, transition.EventId);
+                    ExecuteAction(state.OnExitActionId, instancePtr, contextPtr, ref cmdWriter);
                 }
                 
                 // Save history if this state has history
@@ -522,7 +533,7 @@ namespace Fhsm.Kernel
             // 2. Execute transition action
             if (transition.ActionId != 0 && transition.ActionId != 0xFFFF)
             {
-                ExecuteAction(transition.ActionId, instancePtr, contextPtr, transition.EventId);
+                ExecuteAction(transition.ActionId, instancePtr, contextPtr, ref cmdWriter);
             }
             
             // 3. Execute entry actions (LCA -> leaf)
@@ -553,7 +564,7 @@ namespace Fhsm.Kernel
                 
                 if (state.OnEntryActionId != 0 && state.OnEntryActionId != 0xFFFF)
                 {
-                    ExecuteAction(state.OnEntryActionId, instancePtr, contextPtr, transition.EventId);
+                    ExecuteAction(state.OnEntryActionId, instancePtr, contextPtr, ref cmdWriter);
                 }
                 
                 // If composite, resolve to initial child
@@ -575,7 +586,7 @@ namespace Fhsm.Kernel
             ushort actionId,
             byte* instancePtr,
             void* contextPtr,
-            ushort eventId)
+            ref HsmCommandWriter cmdWriter)
         {
             if (_traceBuffer != null)
             {
@@ -586,7 +597,10 @@ namespace Fhsm.Kernel
                 }
             }
 
-            HsmActionDispatcher.ExecuteAction(actionId, instancePtr, contextPtr, eventId);
+            fixed(HsmCommandWriter* writerPtr = &cmdWriter)
+            {
+                HsmActionDispatcher.ExecuteAction(actionId, instancePtr, contextPtr, writerPtr);
+            }
         }
 
         private static TransitionPath ComputeLCA(
