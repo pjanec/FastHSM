@@ -89,14 +89,14 @@ namespace Fhsm.Tests.Data
                 var inst = new HsmInstance64();
                 inst.Header.MachineId = 0x1111;
                 inst.Header.Generation = 10;
-                inst.Header.RandomSeed = 0x9999;
+                inst.Header.RngState = 0x9999;
                 inst.Header.Phase = InstancePhase.RTC; // Was running
                 
                 HsmInstanceManager.Reset(&inst);
                 
                 Assert.Equal(0x1111u, inst.Header.MachineId);
                 Assert.Equal(11, inst.Header.Generation);
-                Assert.Equal(0x9999u, inst.Header.RandomSeed);
+                Assert.Equal(0x9999u, inst.Header.RngState);
                 Assert.Equal(InstancePhase.Idle, inst.Header.Phase);
             }
         }

@@ -328,5 +328,62 @@ namespace Fhsm.Kernel
             Unsafe.SkipInit(out evt);
             return false;
         }
+
+        public static unsafe void RecallDeferredEvents(void* instance, int size)
+        {
+             if (instance == null) return;
+             switch (size)
+             {
+                 case 64: RecallDeferredTier1((byte*)instance); break;
+                 case 128: RecallDeferredTier2((byte*)instance, Tier2_IntSlotUsed_Offset, Tier2_EventCount_Offset, Tier2_Buffer_Offset, Tier2_Ring_Offset, Tier2_Ring_Capacity); break;
+                 case 256: RecallDeferredTier2((byte*)instance, Tier3_IntSlotUsed_Offset, Tier3_EventCount_Offset, Tier3_Buffer_Offset, Tier3_Ring_Offset, Tier3_Ring_Capacity); break;
+             }
+        }
+
+        private static unsafe void RecallDeferredTier1(byte* ptr)
+        {
+            ref byte count = ref ptr[Tier1_EventCount_Offset];
+            if (count > 0)
+            {
+                byte* buffer = ptr + Tier1_Buffer_Offset;
+                HsmEvent* evt = (HsmEvent*)buffer;
+                if ((evt->Flags & EventFlags.IsDeferred) != 0)
+                {
+                    evt->Flags &= ~EventFlags.IsDeferred;
+                }
+            }
+        }
+
+        private static unsafe void RecallDeferredTier2(byte* ptr, int intSlotUsedOffset, int eventCountOffset, int bufferOffset, int ringOffset, int ringCapacity)
+        {
+            ref byte intSlotUsed = ref ptr[intSlotUsedOffset];
+            if (intSlotUsed == 1)
+            {
+                 byte* intSlot = ptr + bufferOffset;
+                 HsmEvent* evt = (HsmEvent*)intSlot;
+                 if ((evt->Flags & EventFlags.IsDeferred) != 0)
+                 {
+                     evt->Flags &= ~EventFlags.IsDeferred;
+                 }
+            }
+
+            ref byte ringCount = ref ptr[eventCountOffset];
+            if (ringCount > 0)
+            {
+                InstanceHeader* header = (InstanceHeader*)ptr;
+                byte* ringStart = ptr + ringOffset;
+                
+                int head = header->QueueHead;
+                for (int i = 0; i < ringCount; i++)
+                {
+                    int index = (head + i) % ringCapacity;
+                    HsmEvent* slot = (HsmEvent*)(ringStart + (index * sizeof(HsmEvent)));
+                    if ((slot->Flags & EventFlags.IsDeferred) != 0)
+                    {
+                        slot->Flags &= ~EventFlags.IsDeferred;
+                    }
+                }
+            }
+        }
     }
 }

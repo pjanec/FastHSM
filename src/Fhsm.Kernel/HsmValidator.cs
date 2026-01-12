@@ -163,5 +163,54 @@ namespace Fhsm.Kernel
             if (blob == null) return false;
             return transitionId < blob.Transitions.Length;
         }
+
+        public static bool CheckTierBudget(HsmDefinitionBlob blob, int tierSize, out string? error)
+        {
+            error = null;
+            if (blob == null)
+            {
+                error = "Blob is null";
+                return false;
+            }
+
+            int limitRegions, limitTimers, limitHistory;
+            switch(tierSize)
+            {
+                case 64: limitRegions = 2; limitTimers = 2; limitHistory = 2; break;
+                case 128: limitRegions = 4; limitTimers = 4; limitHistory = 8; break;
+                case 256: limitRegions = 8; limitTimers = 8; limitHistory = 16; break;
+                default: error = $"Invalid Tier Size {tierSize}"; return false;
+            }
+
+            if (blob.Header.RegionCount > limitRegions)
+            {
+                error = $"Region Count {blob.Header.RegionCount} exceeds limit {limitRegions} for Tier {tierSize}";
+                return false;
+            }
+            
+            for (int i = 0; i < blob.States.Length; i++)
+            {
+                ref readonly var state = ref blob.States[i];
+                if (state.HistorySlotIndex != 0xFFFF)
+                {
+                    if (state.HistorySlotIndex >= limitHistory)
+                    {
+                        error = $"State {i} requests History Slot {state.HistorySlotIndex} (Limit {limitHistory - 1})";
+                        return false;
+                    }
+                }
+                
+                if (state.TimerSlotIndex != 0xFFFF)
+                {
+                    if (state.TimerSlotIndex >= limitTimers)
+                    {
+                        error = $"State {i} requests Timer Slot {state.TimerSlotIndex} (Limit {limitTimers - 1})";
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
     }
 }

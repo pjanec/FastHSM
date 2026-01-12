@@ -11,13 +11,13 @@ namespace Fhsm.Kernel.Data
     {
         // === Identity (8 bytes) ===
         [FieldOffset(0)] public uint MachineId;         // DefinitionBlob structure hash
-        [FieldOffset(4)] public uint RandomSeed;        // Deterministic RNG seed
+        [FieldOffset(4)] public uint RngState;          // Deterministic RNG state (Initialized with Seed)
 
         // === State (4 bytes) ===
         [FieldOffset(8)] public ushort Generation;      // Increments on hard reset
         [FieldOffset(10)] public InstanceFlags Flags;   // Status flags (1 byte)
         [FieldOffset(11)] public InstancePhase Phase;   // Current execution phase (1 byte)
-
+        
         // === Execution Tracking (4 bytes) ===
         [FieldOffset(12)] public byte MicroStep;        // Current RTC microstep
         [FieldOffset(13)] public byte QueueHead;        // Event queue read cursor

@@ -53,7 +53,7 @@ namespace Fhsm.Tests.Data
                 var basePtr = (byte*)&header;
                 
                 Assert.Equal(0, (byte*)&header.MachineId - basePtr);
-                Assert.Equal(4, (byte*)&header.RandomSeed - basePtr);
+                Assert.Equal(4, (byte*)&header.RngState - basePtr);
                 Assert.Equal(8, (byte*)&header.Generation - basePtr);
                 Assert.Equal(10, (byte*)&header.Flags - basePtr);
                 Assert.Equal(12, (byte*)&header.MicroStep - basePtr);
@@ -119,14 +119,14 @@ namespace Fhsm.Tests.Data
             var header = new InstanceHeader
             {
                 MachineId = 12345,
-                RandomSeed = 67890,
+                RngState = 67890,
                 Generation = 1,
                 Flags = InstanceFlags.Error,
                 Phase = InstancePhase.Activity
             };
 
             Assert.Equal(12345u, header.MachineId);
-            Assert.Equal(67890u, header.RandomSeed);
+            Assert.Equal(67890u, header.RngState);
             Assert.Equal(1, header.Generation);
             Assert.Equal(InstanceFlags.Error, header.Flags);
             Assert.Equal(InstancePhase.Activity, header.Phase);

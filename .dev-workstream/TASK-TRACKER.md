@@ -66,11 +66,11 @@
 - [x] **TASK-G02** Command Buffer Integration → [details](GAP-TASKS.md#task-g02-command-buffer-integration) *BATCH-17, tests fixed in BATCH-18*
 - [x] **TASK-G03** Hot Reload Manager → [details](GAP-TASKS.md#task-g03-hot-reload-manager) *BATCH-18*
 
-### P1 - High Priority (Production Readiness)
-- [ ] **TASK-G04** RNG Wrapper with Debug Tracking (Directive 3) → [details](GAP-TASKS.md#task-g04-rng-wrapper-with-debug-tracking)
-- [ ] **TASK-G05** Timer Cancellation on Exit → [details](GAP-TASKS.md#task-g05-timer-cancellation-on-exit)
-- [ ] **TASK-G06** Deferred Queue Merge → [details](GAP-TASKS.md#task-g06-deferred-queue-merge)
-- [ ] **TASK-G07** Tier Budget Validation → [details](GAP-TASKS.md#task-g07-tier-budget-validation)
+### P1 - High Priority (Production Readiness) ✅ COMPLETE
+- [x] **TASK-G04** RNG Wrapper with Debug Tracking (Directive 3) → [details](GAP-TASKS.md#task-g04-rng-wrapper-with-debug-tracking) *BATCH-19*
+- [x] **TASK-G05** Timer Cancellation on Exit → [details](GAP-TASKS.md#task-g05-timer-cancellation-on-exit) *BATCH-19*
+- [x] **TASK-G06** Deferred Queue Merge → [details](GAP-TASKS.md#task-g06-deferred-queue-merge) *BATCH-19*
+- [x] **TASK-G07** Tier Budget Validation → [details](GAP-TASKS.md#task-g07-tier-budget-validation) *BATCH-19*
 
 ### P2 - Medium Priority (Tooling & Polish)
 - [ ] **TASK-G08** Trace Symbolication Tool → [details](GAP-TASKS.md#task-g08-trace-symbolication-tool)
@@ -93,9 +93,9 @@
 
 ## Progress Summary
 
-**Completed:** 32 tasks (BATCH-01 through BATCH-18)  
+**Completed:** 36 tasks (BATCH-01 through BATCH-19)  
 **In Progress:** 1 task (E02 - Documentation)  
-**Remaining (Gap Tasks):** 17 tasks (G04-G20)
+**Remaining (Gap Tasks):** 13 tasks (G08-G20)
 
 **Status:** ⚠️ **CORE FUNCTIONAL, GAPS IDENTIFIED**
 

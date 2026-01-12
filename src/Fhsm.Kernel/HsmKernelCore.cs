@@ -157,6 +157,14 @@ namespace Fhsm.Kernel
         {
             if (definition.Header.StateCount == 0) return;
 
+            InstanceHeader* header = (InstanceHeader*)instancePtr;
+
+            // Initialize RNG
+            if (header->RngState == 0)
+            {
+                header->RngState = 0x5EEDCAFE; // Ensure non-zero default
+            }
+
             // 1. Find target state (Drill down from Root 0 to initial leaf)
             ushort targetState = 0; // Assume Root is 0
             
@@ -176,7 +184,6 @@ namespace Fhsm.Kernel
             // 2. Compute Entry Path from Virtual Root (0xFFFF) to Target
             TransitionPath path = ComputeLCA(definition, 0xFFFF, targetState);
             
-            InstanceHeader* header = (InstanceHeader*)instancePtr;
             if (_traceBuffer != null && (header->Flags & InstanceFlags.DebugTrace) != 0)
             {
                 _traceBuffer.WriteStateChange(header->MachineId, targetState, true); // Log initial entry
@@ -287,7 +294,6 @@ namespace Fhsm.Kernel
                 {
                     // Re-enqueue deferred event with Low priority
                     evt.Priority = EventPriority.Low;
-                    evt.Flags &= ~EventFlags.IsDeferred;
                     HsmEventQueue.TryEnqueue(instancePtr, instanceSize, evt);
                     continue;
                 }
@@ -518,6 +524,9 @@ namespace Fhsm.Kernel
 
                 ref readonly var state = ref definition.GetState(stateId);
                 
+                // Cancel timers owned by this state (clears all for now)
+                CancelTimers(instancePtr, instanceSize);
+
                 if (state.OnExitActionId != 0 && state.OnExitActionId != 0xFFFF)
                 {
                     ExecuteAction(state.OnExitActionId, instancePtr, contextPtr, ref cmdWriter);
@@ -580,6 +589,9 @@ namespace Fhsm.Kernel
             
             // 4. Update active state
             activeLeafIds[0] = finalLeafId;
+            
+            // 5. Recall Deferred Events
+            HsmEventQueue.RecallDeferredEvents(instancePtr, instanceSize);
         }
 
         private static void ExecuteAction(
@@ -770,6 +782,45 @@ namespace Fhsm.Kernel
             else if (instanceSize == 256) ptr = (ushort*)(instancePtr + CurrentEventId_Offset_256);
 
             return ptr != null ? *ptr : (ushort)0;
+        }
+
+        private static int GetTimerCount(int instanceSize)
+        {
+            return instanceSize switch
+            {
+                64 => 2,
+                128 => 4,
+                256 => 8,
+                _ => 0
+            };
+        }
+
+        /// <summary>
+        /// Cancel all timers (called on state exit).
+        /// </summary>
+        private static unsafe void CancelTimers(byte* instancePtr, int instanceSize)
+        {
+            // Get timer array based on instance size
+            int timerCount = GetTimerCount(instanceSize);
+            
+            if (instanceSize == 64)
+            {
+                HsmInstance64* inst = (HsmInstance64*)instancePtr;
+                for (int i = 0; i < 2; i++)
+                    inst->TimerDeadlines[i] = 0;
+            }
+            else if (instanceSize == 128)
+            {
+                HsmInstance128* inst = (HsmInstance128*)instancePtr;
+                for (int i = 0; i < 4; i++)
+                    inst->TimerDeadlines[i] = 0;
+            }
+            else if (instanceSize == 256)
+            {
+                HsmInstance256* inst = (HsmInstance256*)instancePtr;
+                for (int i = 0; i < 8; i++)
+                    inst->TimerDeadlines[i] = 0;
+            }
         }
     }
 }

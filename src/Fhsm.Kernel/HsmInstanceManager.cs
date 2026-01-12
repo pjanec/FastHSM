@@ -50,7 +50,7 @@ namespace Fhsm.Kernel
              // Preserve specific fields
              uint machineId = header.MachineId;
              ushort generation = header.Generation;
-             uint randomSeed = header.RandomSeed;
+             uint rngState = header.RngState;
              
              // Zero everything
              Unsafe.InitBlock(instance, 0, (uint)sizeof(T));
@@ -58,7 +58,7 @@ namespace Fhsm.Kernel
              // Restore/Update fields
              header.MachineId = machineId;
              header.Generation = (ushort)(generation + 1); // Increment generation
-             header.RandomSeed = randomSeed;
+             header.RngState = rngState;
              header.Phase = InstancePhase.Idle;
 
              // Mark as uninitialized
