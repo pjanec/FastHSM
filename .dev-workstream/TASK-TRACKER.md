@@ -51,18 +51,55 @@
 
 ## Phase T: Tooling
 
-- [ ] **TASK-T01** Hot Reload Manager (Architect Q3, Q8) → [details](TASK-DEFINITIONS.md#task-t01-hot-reload-manager)
+- [ ] **TASK-T01** Hot Reload Manager (Architect Q3, Q8) → [details](TASK-DEFINITIONS.md#task-t01-hot-reload-manager) ⚠️ **See TASK-G03**
 - [x] **TASK-T02** Debug Trace Buffer (Architect Q8) → [details](TASK-DEFINITIONS.md#task-t02-debug-trace-buffer)
+
+---
+
+## Phase G: Gap Implementation (Design Completeness)
+
+**See:** [GAP-ANALYSIS.md](GAP-ANALYSIS.md) for full analysis  
+**See:** [GAP-TASKS.md](GAP-TASKS.md) for detailed task definitions
+
+### P0 - Critical (Blocks Core Functionality)
+- [x] **TASK-G01** Global Transition Checking → [details](GAP-TASKS.md#task-g01-global-transition-checking) *BATCH-16*
+- [ ] **TASK-G02** Command Buffer Integration → [details](GAP-TASKS.md#task-g02-command-buffer-integration)
+- [ ] **TASK-G03** Hot Reload Manager → [details](GAP-TASKS.md#task-g03-hot-reload-manager) *(replaces TASK-T01)*
+
+### P1 - High Priority (Production Readiness)
+- [ ] **TASK-G04** RNG Wrapper with Debug Tracking (Directive 3) → [details](GAP-TASKS.md#task-g04-rng-wrapper-with-debug-tracking)
+- [ ] **TASK-G05** Timer Cancellation on Exit → [details](GAP-TASKS.md#task-g05-timer-cancellation-on-exit)
+- [ ] **TASK-G06** Deferred Queue Merge → [details](GAP-TASKS.md#task-g06-deferred-queue-merge)
+- [ ] **TASK-G07** Tier Budget Validation → [details](GAP-TASKS.md#task-g07-tier-budget-validation)
+
+### P2 - Medium Priority (Tooling & Polish)
+- [ ] **TASK-G08** Trace Symbolication Tool → [details](GAP-TASKS.md#task-g08-trace-symbolication-tool)
+- [ ] **TASK-G09** Indirect Event Validation (Directive 2) → [details](GAP-TASKS.md#task-g09-indirect-event-validation)
+- [ ] **TASK-G10** Fail-Safe State Transition → [details](GAP-TASKS.md#task-g10-fail-safe-state-transition)
+- [ ] **TASK-G11** Command Buffer Paged Allocator → [details](GAP-TASKS.md#task-g11-command-buffer-paged-allocator)
+- [ ] **TASK-G12** Bootstrapper & Registry → [details](GAP-TASKS.md#task-g12-bootstrapper--registry)
+
+### P3 - Low Priority (v2.0 Features)
+- [ ] **TASK-G13** CommandLane Enum → [details](GAP-TASKS.md#task-g13-commandlane-enum)
+- [ ] **TASK-G14** JSON Input Parser → [details](GAP-TASKS.md#task-g14-json-input-parser)
+- [ ] **TASK-G15** Slot Conflict Validation → [details](GAP-TASKS.md#task-g15-slot-conflict-validation)
+- [ ] **TASK-G16** LinkerTableEntry Struct → [details](GAP-TASKS.md#task-g16-linkertableentry-struct)
+- [ ] **TASK-G17** XxHash64 Implementation → [details](GAP-TASKS.md#task-g17-xxhash64-implementation)
+- [ ] **TASK-G18** Debug Metadata Export → [details](GAP-TASKS.md#task-g18-debug-metadata-export)
+- [ ] **TASK-G19** Full Orthogonal Region Support → [details](GAP-TASKS.md#task-g19-full-orthogonal-region-support)
+- [ ] **TASK-G20** Deep History Support → [details](GAP-TASKS.md#task-g20-deep-history-support)
 
 ---
 
 ## Progress Summary
 
-**Completed:** 29 tasks  
-**In Progress:** 1 task (E02 - BATCH-14)  
-**Remaining:** 1 task (T01)
+**Completed:** 30 tasks (BATCH-01 through BATCH-16)  
+**In Progress:** 1 task (E02 - Documentation)  
+**Remaining (Gap Tasks):** 19 tasks (G02-G20)
 
-**Status:** 🎉 **CORE IMPLEMENTATION COMPLETE!**
+**Status:** ⚠️ **CORE FUNCTIONAL, GAPS IDENTIFIED**
+
+**Implementation vs Design:** ~75% Complete
 
 All critical systems functional:
 - ✅ Data Layer (ROM/RAM structures)
@@ -71,10 +108,16 @@ All critical systems functional:
 - ✅ Source Generation (Action/Guard dispatch)
 - ✅ Integration (End-to-end test passes)
 
-Remaining optional tasks:
-- Documentation (TASK-E02)
-- Hot Reload (TASK-T01)
-- Debug Tracing (TASK-T02)
+**Gap Analysis Complete:**
+- ❌ 3 critical gaps (P0): Global transitions, command buffer, hot reload
+- ❌ 4 high-priority gaps (P1): RNG, timer cancel, deferred queue, tier budget
+- ⚠️ 5 medium-priority gaps (P2): Tooling & polish
+- 📋 8 low-priority gaps (P3): v2.0 features
+
+**Next Steps:**
+1. Review gap analysis ([GAP-SUMMARY.md](GAP-SUMMARY.md))
+2. Approve implementation order
+3. Begin Sprint 1 (P0 tasks)
 
 ---
 

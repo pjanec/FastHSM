@@ -191,7 +191,47 @@ Every batch instruction file should follow this structure:
 ---
 
 ## 📊 Report Requirements
-[What developer must document in their report]
+
+**Focus on Developer Insights, Not Understanding Checks**
+
+The report should gather valuable professional feedback, not test the developer's understanding. Ask about:
+
+**✅ What to Ask:**
+- **Issues Encountered:** What problems did you run into? How did you solve them?
+- **Weak Points Spotted:** What areas of the codebase could be improved?
+- **Design Decisions Made:** What choices did you make beyond the spec? Why?
+- **Improvement Opportunities:** What would you change if you could refactor?
+- **Edge Cases Discovered:** What scenarios weren't in the instructions?
+- **Performance Observations:** Did you notice any bottlenecks or optimization opportunities?
+
+**❌ What NOT to Ask:**
+- "Explain how X works" (baby-sitting question)
+- "What is the purpose of Y?" (testing comprehension)
+- "Why did we choose Z?" (understanding check)
+
+**Example - Good Questions:**
+```markdown
+## Developer Insights
+
+**Q1:** What issues did you encounter during implementation? How did you resolve them?
+
+**Q2:** Did you spot any weak points in the existing codebase? What would you improve?
+
+**Q3:** What design decisions did you make beyond the instructions? What alternatives did you consider?
+
+**Q4:** What edge cases did you discover that weren't mentioned in the spec?
+
+**Q5:** Are there any performance concerns or optimization opportunities you noticed?
+```
+
+**Example - Bad Questions (Don't Use):**
+```markdown
+❌ Q1: Explain how the LCA algorithm works.
+❌ Q2: What is the purpose of the GlobalTransitionDef struct?
+❌ Q3: Why do global transitions have priority 255?
+```
+
+The developer is skilled and understands their work. Focus on capturing their valuable insights and experience.
 
 ---
 
@@ -269,8 +309,10 @@ Always include sections on:
 - **REQUIRED:** Tests that verify actual behavior and edge cases
 
 **❗ REPORT QUALITY EXPECTATIONS**
-- **REQUIRED:** Thoroughly answer ALL specific questions
+- **REQUIRED:** Document issues encountered and how you resolved them
 - **REQUIRED:** Document design decisions YOU made beyond the spec
+- **REQUIRED:** Share insights on code quality and improvement opportunities
+- **REQUIRED:** Note any edge cases or scenarios discovered during implementation
 ```
 
 #### 7. **References: Link to Context**
@@ -299,23 +341,20 @@ Always include sections on:
 
 When developer submits `.dev-workstream/reports/BATCH-XX-REPORT.md`:
 
-#### Step 1: Read the Report (10-15 minutes)
+#### Step 1: Read the Report (5-10 minutes)
 
 **Check for:**
 - [ ] All tasks marked complete
-- [ ] Test results included (full output, not just "passing")
-- [ ] Deviations documented with rationale
-- [ ] Specific questions answered
-- [ ] Known issues/limitations listed
-- [ ] Pre-submission checklist completed
+- [ ] Test results included (passing count)
+- [ ] Issues encountered documented
+- [ ] Design decisions made documented
 
 **Red flags:**
-- No deviations listed (suspicious - either perfect or not documenting)
-- Brief answers to specific questions
-- Missing sections from template
-- Test counts but no test descriptions
+- No issues or decisions mentioned (likely incomplete report)
+- Test counts but no description of what they test
+- Missing required sections
 
-#### Step 2: Review Code Changes (30-60 minutes)
+#### Step 2: Review Code Changes (20-30 minutes)
 
 **Examine:**
 
@@ -323,258 +362,193 @@ When developer submits `.dev-workstream/reports/BATCH-XX-REPORT.md`:
    ```bash
    git status
    git diff --stat
-   git diff [specific-files]
    ```
 
-2. **Architecture Fit**
-   - [ ] Follows existing patterns
-   - [ ] Doesn't violate architectural principles
-   - [ ] Integrates cleanly with existing code
-   - [ ] No circular dependencies introduced
+2. **Look for Problems**
+   - ❌ Incomplete implementation (missing features from spec)
+   - ❌ Architectural violations
+   - ❌ Compiler warnings
+   - ❌ Missing error handling
+   - ❌ Obvious performance issues
+   - ❌ Unhandled edge cases from spec
 
-3. **Code Quality**
-   - [ ] Readable and maintainable
-   - [ ] Appropriately documented (XML comments on public APIs)
-   - [ ] No compiler warnings
-   - [ ] Error handling present
-   - [ ] Edge cases handled
+#### Step 3: Review Tests (15-20 minutes)
 
-4. **Performance Considerations**
-   - [ ] No obvious performance issues
-   - [ ] Allocations minimized where important
-   - [ ] No blocking calls in async paths
-   - [ ] Meets specified performance targets
+**Focus: Do tests verify WHAT MATTERS?**
 
-#### Step 3: Review Tests (20-30 minutes)
+**Look for Problems:**
 
-**Critical: Test QUALITY, not just quantity**
-
-**Check for:**
-- [ ] Tests verify behavior, not implementation
-- [ ] Edge cases covered
-- [ ] Error conditions tested
-- [ ] Integration scenarios included
-- [ ] Tests are readable and maintainable
-- [ ] Tests don't have copy-paste duplication
-
-**Bad Test Example:**
+❌ **Shallow Tests** - Tests that verify nothing meaningful:
 ```csharp
 [Fact]
 public void ComponentExists() {
     var component = new NetworkSpawnRequest();
-    Assert.NotNull(component); // ❌ Tests nothing meaningful
+    Assert.NotNull(component); // Tests nothing
 }
 ```
 
-**Good Test Example:**
-```csharp
-[Fact]
-public void EntityStateTranslator_StateBeforeMaster_CreatesGhostWithPosition() {
-    // Arrange
-    var translator = CreateTranslator();
-    var desc = new EntityStateDescriptor { Location = new Vector3(10, 20, 30) };
-    
-    // Act
-    translator.PollIngress(mockReader, cmd, repo);
-    
-    // Assert
-    var entity = GetEntityByNetworkId(123);
-    Assert.Equal(EntityLifecycle.Ghost, repo.GetLifecycleState(entity));
-    var pos = repo.GetComponentRO<Position>(entity);
-    Assert.Equal(10, pos.Value.X); // ✅ Tests actual behavior
-}
-```
+❌ **Missing Coverage** - Required scenarios from spec not tested:
+- Edge cases specified in batch instructions
+- Error conditions mentioned in design doc
+- Integration scenarios from acceptance criteria
+
+❌ **Wrong Abstraction** - Testing implementation details instead of behavior
 
 **Ask yourself:**
-- If I broke the implementation, would these tests catch it?
-- Do tests verify WHAT MATTERS, not just coverage?
-- Are tests testing the right abstraction level?
+1. If I broke the implementation, would these tests catch it?
+2. Are the tests from the spec requirements actually implemented?
+3. Do tests verify behavior, or just that code compiles?
 
-#### Step 4: Evaluate Deviations (10-20 minutes)
+#### Step 4: Check Completeness (5-10 minutes)
 
-**For each deviation developer documented:**
+**Compare batch instructions to implementation:**
 
-1. **Understand the rationale**
-   - Why did they deviate?
-   - What problem were they solving?
+- [ ] All required features implemented
+- [ ] All acceptance criteria met
+- [ ] All specified tests present
+- [ ] All edge cases from spec handled
 
-2. **Assess the impact**
-   - Does it violate architecture?
-   - Does it create technical debt?
-   - Does it affect other systems?
+**If incomplete:**
+- Document what's missing
+- Specify exactly what needs to be added
 
-3. **Make a decision**
+#### Step 5: Run Tests (5 minutes)
 
-**ACCEPT if:**
-- Improves on original design
-- Well-reasoned and documented
-- Benefits outweigh risks
-- Doesn't violate core principles
-
-**REJECT if:**
-- Violates architectural principles
-- Creates maintainability issues
-- Undocumented or poorly reasoned
-- Introduces security/safety issues
-
-**DISCUSS if:**
-- Unclear trade-offs
-- Multiple valid approaches exist
-- Affects future work significantly
-
-#### Step 5: Check Testing Execution (Optional but Recommended)
-
-**Run tests yourself if:**
-- Complex integration logic
-- Performance-critical code
-- Previous batches had test issues
-- Developer's environment differs from production
+**Always run tests to verify:**
+- All tests actually pass
+- No flaky tests
+- Test count matches report
 
 ```bash
-# Clone the branch or pull changes
-git pull
-
-# Run tests
-[project-specific test commands]
-
-# Check for flakiness (run 3-5 times)
-for i in {1..5}; do
-  [test command]
-done
+dotnet test [project]
 ```
 
 ### Writing Your Review
 
 Create: `.dev-workstream/reviews/BATCH-XX-REVIEW.md`
 
+**Review Principles:**
+- **Focus on Issues** - Document what's wrong, incomplete, or insufficient
+- **Be Brief** - Skip praise and fluff, the developer is competent
+- **Be Specific** - Point to exact files, lines, test gaps
+- **Include Commit Message** - If approved, provide ready-to-use commit message
+
 **Review Template:**
 
 ```markdown
 # BATCH-XX Review
 
-**Reviewer:** [Your Name]  
+**Batch:** BATCH-XX  
+**Reviewer:** Development Lead  
 **Date:** [YYYY-MM-DD]  
-**Batch Status:** [APPROVED / APPROVED WITH NOTES / CHANGES REQUIRED / REJECTED]
+**Status:** [✅ APPROVED / ⚠️ NEEDS FIXES / ❌ REJECTED]
 
 ---
 
-## Tasks Completed
+## Summary
 
-- ✅ TASK-ID1: [Task Name]
-- ✅ TASK-ID2: [Task Name]
-- ⚠️ TASK-ID3: [Task Name] (needs fixes)
+[1-2 sentences: What was done, overall status]
 
 ---
 
-## Overall Assessment
+## Issues Found
 
-[2-3 sentence summary of batch quality]
+[If NO ISSUES, write "No issues found." and skip to Commit Message section]
 
-**Quality Score:** [X/10]
+### Issue 1: [Brief Title]
 
----
+**File:** `path/to/file.cs` (Line X)  
+**Problem:** [What's wrong]  
+**Fix:** [What needs to change]
 
-## ✅ What Was Done Well
+### Issue 2: [Test Coverage Gap]
 
-1. [Specific praise for good work]
-2. [Highlight excellent decisions]
-3. [Recognize quality implementations]
+**Missing Tests:**
+- [Specific scenario not tested]
+- [Edge case not covered]
 
----
-
-## ⚠️ Issues Found
-
-### Issue 1: [Issue Title]
-
-**Severity:** [CRITICAL / HIGH / MEDIUM / LOW]
-
-**Description:** [What's wrong and why it matters]
-
-**Impact:** [How this affects the system]
-
-**Action Required:** [What developer should do]
-
-**Reasoning:** [Why this needs to change]
+**Why It Matters:** [Impact of missing coverage]
 
 [Repeat for each issue]
 
 ---
 
-## 📊 Code Review Details
+## Test Quality Assessment
 
-### [Component/File Name]
-- ✅ [What's good]
-- ⚠️ [What needs attention]
-- ❌ [What must change]
+[Only include if tests are inadequate]
 
-[Repeat for major components]
+**Problems:**
+- Test X verifies nothing meaningful (just checks object exists)
+- Missing edge case: [scenario]
+- Missing integration test: [scenario]
 
----
-
-## 🧪 Test Review
-
-**Test Count:** [X] (Target: [Y])
-
-**Coverage Analysis:**
-| Component | Tests | Quality | Notes |
-|-----------|-------|---------|-------|
-| [Name] | [Count] | [Good/Adequate/Weak] | [Comments] |
-
-**What Tests Validate:** [Summary]
-**What Tests Miss:** [Gaps]
-**Verdict:** [Assessment]
+**Required Additions:**
+1. [Specific test needed]
+2. [Specific test needed]
 
 ---
 
-## 🔧 Action Items
+## Verdict
 
-### For Developer (If Changes Required)
-1. [Specific action]
-2. [Specific action]
+**Status:** [APPROVED / NEEDS FIXES]
 
-### For Future Batches
-1. [Lessons learned]
-2. [Process improvements]
+[If NEEDS FIXES:]
+**Required Actions:**
+1. [Specific fix]
+2. [Specific fix]
 
----
-
-## ✅ Approval Decision
-
-**Status:** [APPROVED / CHANGES REQUIRED]
-
-**Reasoning:**
-- [Point 1]
-- [Point 2]
-
-**Next Steps:**
-1. [What happens next]
+[If APPROVED:]
+**All requirements met. Ready to merge.**
 
 ---
 
-**Reviewed by:** [Your Name]  
-**Approval Date:** [YYYY-MM-DD]  
-**Next Batch:** [BATCH-XX or "TBD"]
+## 📝 Commit Message
+
+[Only include if APPROVED]
+
+```
+[type]: [Brief summary] (BATCH-XX)
+
+Completes TASK-ID1, TASK-ID2
+
+[2-3 sentence description of what changed]
+
+[Key changes by component]
+
+Tests: [X tests, covering Y scenarios]
+```
+
+---
+
+**Next Batch:** [BATCH-XX or "Preparing next batch"]
 ```
 
 ### Review Quality Standards
 
 **Your reviews should be:**
-- **Specific:** Point to exact lines/files, not vague criticism
-- **Constructive:** Explain why and suggest alternatives
-- **Balanced:** Recognize good work, not just problems
-- **Actionable:** Developer knows exactly what to do
-- **Educational:** Help developer improve, not just fix
+- **Issue-Focused:** Document problems, not praise
+- **Specific:** Point to exact files, lines, test gaps
+- **Brief:** Skip fluff, get to the point
+- **Actionable:** Developer knows exactly what to fix
 
 **Examples:**
 
-❌ **Bad Review:**
+❌ **Bad Review (Too Vague):**
 > "Tests are not good enough."
 
-✅ **Good Review:**
-> "Tests verify basic functionality but lack edge cases. For example, `NetworkSpawnerSystem` tests don't cover what happens when TKB template is missing. Add tests for:
-> 1. Missing template → Error handling
-> 2. Null entity reference → Graceful failure
-> 3. Invalid DIS type → Logged and skipped"
+✅ **Good Review (Specific Issues):**
+> "Test coverage insufficient:
+> - `NetworkSpawnerSystem_Creates_Entity` only checks entity exists, doesn't verify components
+> - Missing: What happens when TKB template is missing? (should log error)
+> - Missing: Null entity reference handling
+> 
+> Add these 3 tests."
+
+❌ **Bad Review (Unnecessary Praise):**
+> "Great work on the state machine! The code is very clean and well-structured. The tests are comprehensive and well-written. Excellent job!"
+
+✅ **Good Review (Brief, Issue-Focused):**
+> "No issues found. Ready to merge."
 
 ---
 
@@ -939,13 +913,14 @@ When you commit this batch, use the following message:
 
 ### Phase 3: Review
 
-1. **Read report** (10-15 min)
-2. **Review code** (30-60 min)
-3. **Evaluate tests** (20-30 min)
-4. **Assess deviations** (10-20 min)
-5. **Write review** (20-30 min)
+1. **Read report** (5-10 min)
+2. **Review code** (20-30 min)
+3. **Review tests** (15-20 min)
+4. **Check completeness** (5-10 min)
+5. **Run tests** (5 min)
+6. **Write review** (10-15 min)
 
-**Total: 1.5-3 hours per batch**
+**Total: 1-1.5 hours per batch**
 
 ### Phase 4: Decision
 
@@ -1008,21 +983,20 @@ When you commit this batch, use the following message:
 
 ## 💡 Tips for Effective Leadership
 
-### Be Specific
+### Be Specific and Brief
 ❌ "This code is messy"  
-✅ "The `ProcessEntity()` method is 200 lines. Extract Ghost promotion logic into `PromoteGhostToConstructing()` for clarity."
+✅ "`ProcessEntity()` is 200 lines. Extract Ghost promotion logic into separate method."
 
-### Explain Why
 ❌ "Change this"  
-✅ "This creates a race condition because X accesses Y without synchronization. Use lock or make Y thread-local."
+✅ "Race condition: X accesses Y without lock. Add synchronization."
 
-### Recognize Good Work
-✅ "Excellent edge case handling with the null template check - exactly what was needed."  
-✅ "The test structure in `NetworkIntegrationTests` is very clear and maintainable."
+### Skip Praise
+❌ "Excellent edge case handling with the null template check - exactly what was needed."  
+✅ [Don't mention if it's correct - only document problems]
 
-### Provide Alternatives
+### Point to Exact Problems
 ❌ "This is wrong"  
-✅ "This works but causes N+1 queries. Consider loading all entities upfront or using a batch query."
+✅ "Line 45: Causes N+1 queries. Use batch query instead."
 
 ### Balance Pragmatism
 - **P0 (Critical):** Must fix - crashes, security, architectural violations
@@ -1050,48 +1024,29 @@ Copy this for each review:
 ```markdown
 ## BATCH-XX Review Checklist
 
-### Report Quality
-- [ ] All tasks marked complete with details
-- [ ] Test results included (full output)
-- [ ] Specific questions thoroughly answered
-- [ ] Deviations documented with rationale
-- [ ] Known issues/limitations listed
-- [ ] Pre-submission checklist completed
-
-### Code Quality
-- [ ] Follows existing patterns and architecture
+### Implementation
+- [ ] All features from spec implemented
+- [ ] All acceptance criteria met
 - [ ] No compiler warnings
-- [ ] Public APIs documented (XML comments)
-- [ ] Error handling appropriate
-- [ ] Edge cases handled
-- [ ] No obvious performance issues
+- [ ] Error handling present where specified
+- [ ] No architectural violations
 
-### Test Quality  
+### Tests
+- [ ] All required tests from spec present
 - [ ] Tests verify behavior (not just compilation)
-- [ ] Edge cases covered
-- [ ] Error conditions tested
-- [ ] Integration scenarios present
-- [ ] Tests are maintainable
-- [ ] Minimum test count met
+- [ ] Edge cases from spec covered
+- [ ] Tests pass (verified by running them)
 
-### Architecture
-- [ ] Fits with existing design
-- [ ] Doesn't violate principles
-- [ ] Integrates cleanly
-- [ ] No circular dependencies
-- [ ] Appropriate abstractions
-
-### Performance
-- [ ] Meets specified targets
-- [ ] No obvious regressions
-- [ ] Allocation patterns reasonable
-- [ ] Benchmarks run (if applicable)
+### Issues Found
+- [ ] Incomplete implementation: [list or "none"]
+- [ ] Missing tests: [list or "none"]
+- [ ] Shallow tests: [list or "none"]
+- [ ] Code problems: [list or "none"]
 
 ### Decision
-- [ ] **APPROVED** - Ready to merge
-- [ ] **APPROVED WITH NOTES** - Minor suggestions for future
-- [ ] **CHANGES REQUIRED** - Specific fixes needed
-- [ ] **CORRECTIVE BATCH REQUIRED** - Serious issues need dedicated work
+- [ ] **✅ APPROVED** - No issues, ready to merge (include commit message)
+- [ ] **⚠️ NEEDS FIXES** - List specific fixes required
+- [ ] **❌ REJECTED** - Major problems, needs corrective batch
 ```
 
 ---
