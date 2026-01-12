@@ -19,7 +19,7 @@ namespace Fhsm.Demo.Visual
         public const ushort EnemyLost = 8;
         public const ushort UpdateEvent = 9;
         
-        public static HsmDefinitionBlob CreatePatrolMachine()
+        public static (HsmDefinitionBlob, MachineMetadata) CreatePatrolMachine()
         {
             var builder = new HsmBuilder("Patrol");
             
@@ -52,7 +52,7 @@ namespace Fhsm.Demo.Visual
             return CompileAndEmit(builder);
         }
         
-        public static HsmDefinitionBlob CreateGatherMachine()
+        public static (HsmDefinitionBlob, MachineMetadata) CreateGatherMachine()
         {
             var builder = new HsmBuilder("Gather");
             
@@ -96,7 +96,7 @@ namespace Fhsm.Demo.Visual
             return CompileAndEmit(builder);
         }
         
-        public static HsmDefinitionBlob CreateCombatMachine()
+        public static (HsmDefinitionBlob, MachineMetadata) CreateCombatMachine()
         {
             var builder = new HsmBuilder("Combat");
             
@@ -148,7 +148,7 @@ namespace Fhsm.Demo.Visual
             return CompileAndEmit(builder);
         }
         
-        private static HsmDefinitionBlob CompileAndEmit(HsmBuilder builder)
+        private static (HsmDefinitionBlob, MachineMetadata) CompileAndEmit(HsmBuilder builder)
         {
             var graph = builder.Build();
             HsmNormalizer.Normalize(graph);
@@ -159,8 +159,40 @@ namespace Fhsm.Demo.Visual
                 throw new Exception($"Machine validation failed: {string.Join(", ", errors.Select(e => e.Message))}");
             }
             
+            // Extract Metadata
+            var metadata = new MachineMetadata();
+            
+            // States
+            foreach(var state in graph.States.Values)
+            {
+                metadata.StateNames[state.FlatIndex] = state.Name;
+            }
+            
+            // Events
+            foreach(var kvp in graph.EventNameToId)
+            {
+                metadata.EventNames[kvp.Value] = kvp.Key;
+            }
+            
+            // Actions (need to compute hash)
+            foreach(var actionName in graph.RegisteredActions)
+            {
+                metadata.ActionNames[ComputeHash(actionName)] = actionName;
+            }
+            
             var flattened = HsmFlattener.Flatten(graph);
-            return HsmEmitter.Emit(flattened);
+            return (HsmEmitter.Emit(flattened), metadata);
+        }
+        
+        private static ushort ComputeHash(string name)
+        {
+            uint hash = 2166136261;
+            foreach (char c in name)
+            {
+                hash ^= c;
+                hash *= 16777619;
+            }
+            return (ushort)(hash & 0xFFFF);
         }
     }
 }

@@ -9,7 +9,7 @@ namespace Fhsm.Demo.Visual.UI
 {
     public unsafe class StateMachineVisualizer
     {
-        public void Render(Agent agent, HsmDefinitionBlob blob, float time)
+        public void Render(Agent agent, HsmDefinitionBlob blob, MachineMetadata? metadata, float time)
         {
             ImGui.SetNextWindowSize(new Vector2(400, 600), ImGuiCond.FirstUseEver);
             ImGui.Begin($"State Machine: Agent {agent.Id}");
@@ -29,12 +29,12 @@ namespace Fhsm.Demo.Visual.UI
             ImGui.Separator();
             
             // Active states
-            RenderActiveStates(agent, blob);
+            RenderActiveStates(agent, blob, metadata);
             
             ImGui.Separator();
             
             // State hierarchy
-            RenderStateHierarchy(agent, blob);
+            RenderStateHierarchy(agent, blob, metadata);
             
             ImGui.Separator();
             
@@ -44,7 +44,7 @@ namespace Fhsm.Demo.Visual.UI
             ImGui.Separator();
             
             // Transition history
-            RenderTransitionHistory(agent);
+            RenderTransitionHistory(agent, metadata);
             
             ImGui.Separator();
             
@@ -54,7 +54,25 @@ namespace Fhsm.Demo.Visual.UI
             ImGui.End();
         }
         
-        private void RenderActiveStates(Agent agent, HsmDefinitionBlob blob)
+        private string GetStateName(ushort id, MachineMetadata? metadata)
+        {
+            if (metadata != null && metadata.StateNames.TryGetValue(id, out var name))
+            {
+                return $"{name} ({id})";
+            }
+            return $"State {id}";
+        }
+        
+        private string GetEventName(ushort id, MachineMetadata? metadata)
+        {
+            if (metadata != null && metadata.EventNames.TryGetValue(id, out var name))
+            {
+                return $"{name} ({id})";
+            }
+            return $"Event {id}";
+        }
+        
+        private void RenderActiveStates(Agent agent, HsmDefinitionBlob blob, MachineMetadata? metadata)
         {
             ImGui.TextColored(new Vector4(0, 1, 0, 1), "Active States:");
             
@@ -63,8 +81,7 @@ namespace Fhsm.Demo.Visual.UI
                 foreach (var stateId in agent.ActiveStates)
                 {
                     if (stateId == 0xFFFF) continue;
-                    
-                    ImGui.BulletText($"State {stateId}");
+                    ImGui.BulletText(GetStateName(stateId, metadata));
                 }
             }
             else
@@ -73,7 +90,7 @@ namespace Fhsm.Demo.Visual.UI
             }
         }
         
-        private void RenderStateHierarchy(Agent agent, HsmDefinitionBlob blob)
+        private void RenderStateHierarchy(Agent agent, HsmDefinitionBlob blob, MachineMetadata? metadata)
         {
             if (ImGui.CollapsingHeader("State Hierarchy", ImGuiTreeNodeFlags.DefaultOpen))
             {
@@ -85,7 +102,7 @@ namespace Fhsm.Demo.Visual.UI
                     var state = blob.States[i];
                     if (state.ParentIndex == 0xFFFF)
                     {
-                        RenderStateNode(blob, i, agent.ActiveStates, 0);
+                        RenderStateNode(blob, i, agent.ActiveStates, 0, metadata);
                     }
                 }
                 
@@ -93,19 +110,20 @@ namespace Fhsm.Demo.Visual.UI
             }
         }
         
-        private void RenderStateNode(HsmDefinitionBlob blob, ushort stateId, ushort[] activeStates, int depth)
+        private void RenderStateNode(HsmDefinitionBlob blob, ushort stateId, ushort[] activeStates, int depth, MachineMetadata? metadata)
         {
             var state = blob.States[stateId];
             bool isActive = activeStates != null && Array.Exists(activeStates, s => s == stateId);
             
             var color = isActive ? new Vector4(0, 1, 0, 1) : new Vector4(0.7f, 0.7f, 0.7f, 1);
             var prefix = new string(' ', depth * 2);
+            var stateName = GetStateName(stateId, metadata);
             
             bool hasChildren = state.FirstChildIndex != 0xFFFF;
             
             if (hasChildren)
             {
-                bool nodeOpen = ImGui.TreeNodeEx($"{prefix}State {stateId}##node{stateId}", 
+                bool nodeOpen = ImGui.TreeNodeEx($"{prefix}{stateName}##node{stateId}", 
                     isActive ? ImGuiTreeNodeFlags.DefaultOpen : ImGuiTreeNodeFlags.None);
                 
                 if (isActive)
@@ -120,7 +138,7 @@ namespace Fhsm.Demo.Visual.UI
                     ushort childId = state.FirstChildIndex;
                     while (childId != 0xFFFF)
                     {
-                        RenderStateNode(blob, childId, activeStates, depth + 1);
+                        RenderStateNode(blob, childId, activeStates, depth + 1, metadata);
                         childId = blob.States[childId].NextSiblingIndex;
                     }
                     
@@ -129,7 +147,7 @@ namespace Fhsm.Demo.Visual.UI
             }
             else
             {
-                ImGui.TextColored(color, $"{prefix}└ State {stateId}");
+                ImGui.TextColored(color, $"{prefix}└ {stateName}");
                 
                 if (isActive)
                 {
@@ -155,7 +173,7 @@ namespace Fhsm.Demo.Visual.UI
             }
         }
         
-        private void RenderTransitionHistory(Agent agent)
+        private void RenderTransitionHistory(Agent agent, MachineMetadata? metadata)
         {
             if (ImGui.CollapsingHeader("Recent Transitions"))
             {
@@ -169,7 +187,10 @@ namespace Fhsm.Demo.Visual.UI
                 {
                     foreach (var trans in agent.RecentTransitions.TakeLast(10).Reverse())
                     {
-                        ImGui.Text($"{trans.Timestamp:F2}s: {trans.FromState} → {trans.ToState} (Event: {trans.EventId})");
+                        var from = GetStateName(trans.FromState, metadata);
+                        var to = GetStateName(trans.ToState, metadata);
+                        var evt = GetEventName(trans.EventId, metadata);
+                        ImGui.Text($"{trans.Timestamp:F2}s: {from} → {to} ({evt})");
                     }
                 }
                 

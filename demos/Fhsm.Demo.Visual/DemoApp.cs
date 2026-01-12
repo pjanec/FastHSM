@@ -16,8 +16,11 @@ namespace Fhsm.Demo.Visual
 
         private List<Agent> _agents = new();
         private Dictionary<string, HsmDefinitionBlob> _machines = new();
+        private Dictionary<string, MachineMetadata> _machineMetadata = new();
         private BehaviorSystem _behaviorSystem = null!;
         private RenderSystem _renderSystem = null!;
+        
+
         
         private float _time = 0;
         private bool _paused = false;
@@ -70,6 +73,7 @@ namespace Fhsm.Demo.Visual
             
             // Get machines
             _machines = _behaviorSystem.GetMachines();
+            _machineMetadata = _behaviorSystem.GetMachineMetadata();
             
             // Spawn initial agents
             SpawnPatrolAgents(5);
@@ -269,7 +273,8 @@ namespace Fhsm.Demo.Visual
             {
                 if (_machines.TryGetValue(_selectedAgent.MachineName, out var blob))
                 {
-                    _smVisualizer.Render(_selectedAgent, blob, _time);
+                    _machineMetadata.TryGetValue(_selectedAgent.MachineName, out var metadata);
+                    _smVisualizer.Render(_selectedAgent, blob, metadata, _time);
                 }
             }
         }

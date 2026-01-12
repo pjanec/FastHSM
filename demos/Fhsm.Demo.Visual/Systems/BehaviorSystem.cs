@@ -9,18 +9,27 @@ namespace Fhsm.Demo.Visual
     public unsafe class BehaviorSystem
     {
         private Dictionary<string, HsmDefinitionBlob> _machines;
+        private Dictionary<string, MachineMetadata> _machineMetadata;
         private List<Agent>? _currentAgents;
         private Random _random = new Random();
         
         public BehaviorSystem()
         {
+            _machines = new Dictionary<string, HsmDefinitionBlob>();
+            _machineMetadata = new Dictionary<string, MachineMetadata>();
+            
             // Create state machines
-            _machines = new Dictionary<string, HsmDefinitionBlob>
-            {
-                ["patrol"] = MachineDefinitions.CreatePatrolMachine(),
-                ["gather"] = MachineDefinitions.CreateGatherMachine(),
-                ["combat"] = MachineDefinitions.CreateCombatMachine()
-            };
+            var patrol = MachineDefinitions.CreatePatrolMachine();
+            _machines["patrol"] = patrol.Item1;
+            _machineMetadata["patrol"] = patrol.Item2;
+            
+            var gather = MachineDefinitions.CreateGatherMachine();
+            _machines["gather"] = gather.Item1;
+            _machineMetadata["gather"] = gather.Item2;
+            
+            var combat = MachineDefinitions.CreateCombatMachine();
+            _machines["combat"] = combat.Item1;
+            _machineMetadata["combat"] = combat.Item2;
         }
         
         public void InitializeAgent(Agent agent)
@@ -189,5 +198,6 @@ namespace Fhsm.Demo.Visual
         }
         
         public Dictionary<string, HsmDefinitionBlob> GetMachines() => _machines;
+        public Dictionary<string, MachineMetadata> GetMachineMetadata() => _machineMetadata;
     }
 }
