@@ -63,8 +63,8 @@
 
 ### P0 - Critical (Blocks Core Functionality)
 - [x] **TASK-G01** Global Transition Checking → [details](GAP-TASKS.md#task-g01-global-transition-checking) *BATCH-16*
-- [⚠️] **TASK-G02** Command Buffer Integration → [details](GAP-TASKS.md#task-g02-command-buffer-integration) *BATCH-17 - needs test fixes*
-- [ ] **TASK-G03** Hot Reload Manager → [details](GAP-TASKS.md#task-g03-hot-reload-manager) *(replaces TASK-T01)*
+- [x] **TASK-G02** Command Buffer Integration → [details](GAP-TASKS.md#task-g02-command-buffer-integration) *BATCH-17, tests fixed in BATCH-18*
+- [x] **TASK-G03** Hot Reload Manager → [details](GAP-TASKS.md#task-g03-hot-reload-manager) *BATCH-18*
 
 ### P1 - High Priority (Production Readiness)
 - [ ] **TASK-G04** RNG Wrapper with Debug Tracking (Directive 3) → [details](GAP-TASKS.md#task-g04-rng-wrapper-with-debug-tracking)
@@ -93,9 +93,9 @@
 
 ## Progress Summary
 
-**Completed:** 30 tasks (BATCH-01 through BATCH-16)  
+**Completed:** 32 tasks (BATCH-01 through BATCH-18)  
 **In Progress:** 1 task (E02 - Documentation)  
-**Remaining (Gap Tasks):** 19 tasks (G02-G20)
+**Remaining (Gap Tasks):** 17 tasks (G04-G20)
 
 **Status:** ⚠️ **CORE FUNCTIONAL, GAPS IDENTIFIED**
 
