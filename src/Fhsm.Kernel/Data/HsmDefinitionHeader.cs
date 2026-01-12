@@ -18,8 +18,9 @@ namespace Fhsm.Kernel.Data
         [FieldOffset(22)] public ushort GlobalTransitionCount;
         [FieldOffset(24)] public ushort EventDefinitionCount;
         [FieldOffset(26)] public ushort ActionCount;
+        [FieldOffset(28)] public ushort GuardCount;
         
-        [FieldOffset(28)] public uint Reserved2;
+        [FieldOffset(30)] public ushort Reserved2;
         
         public const uint MagicNumber = 0x4D534846;
         

@@ -33,7 +33,8 @@ namespace Fhsm.Kernel.Data
         [FieldOffset(26)] public ushort InitialChildIndex;  // Initial child (0xFFFF = none)
 
         // === Navigation & Extra (4 bytes) ===
-        [FieldOffset(28)] public ushort NextSiblingIndex;   // Next sibling state (0xFFFF = none)
+        [FieldOffset(28)] public byte OutputLaneMask;       // Output lanes this state writes to
+        [FieldOffset(29)] public byte Reserved29;           // Padding
         [FieldOffset(30)] public ushort TimerActionId;      // Timer action (0 = none)
 
         // Total: 32 bytes

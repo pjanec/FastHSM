@@ -25,14 +25,18 @@ namespace Fhsm.Compiler.Graph
         
         // Actions (function names - resolved later)
         public string? OnEntryAction { get; set; }
+        public ushort EntryActionId { get; set; } // Added for JSON parser support
         public string? OnExitAction { get; set; }
+        public ushort ExitActionId { get; set; } // Added for JSON parser support
         public string? ActivityAction { get; set; }
         public string? TimerAction { get; set; }
         
         // Computed during flattening
         public ushort FlatIndex { get; set; } = 0xFFFF;
         public ushort HistorySlotIndex { get; set; } = 0xFFFF;  // 0xFFFF = no history
+        public int TimerSlotIndex { get; set; } = -1;  // Added for validator support (-1 = none)
         public byte Depth { get; set; }
+        public byte OutputLaneMask { get; set; } // Added for Task 8
         
         public StateNode(string name, Guid? stableId = null)
         {

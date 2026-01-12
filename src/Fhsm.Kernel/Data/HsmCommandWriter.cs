@@ -12,16 +12,25 @@ namespace Fhsm.Kernel.Data
         private unsafe CommandPage* _currentPage;
         private int _bytesWritten;
         private readonly int _capacity;
+        private CommandLane _currentLane;
 
         /// <summary>
         /// Create writer for a command page.
         /// </summary>
-        public unsafe HsmCommandWriter(CommandPage* page, int capacity = 4080)
+        public unsafe HsmCommandWriter(CommandPage* page, int capacity = 4080, CommandLane lane = CommandLane.Gameplay)
         {
             _currentPage = page;
             _bytesWritten = 0;
             _capacity = capacity;
+            _currentLane = lane;
         }
+
+        public void SetLane(CommandLane lane)
+        {
+            _currentLane = lane;
+        }
+        
+        public CommandLane CurrentLane => _currentLane;
 
         /// <summary>
         /// Bytes written to current page.

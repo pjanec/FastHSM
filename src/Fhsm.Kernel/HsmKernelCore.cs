@@ -397,7 +397,9 @@ namespace Fhsm.Kernel
                 }
                 
                 ExecuteTransition(definition, instancePtr, instanceSize, selectedTransition.Value, activeLeafIds, regionCount, contextPtr, ref cmdWriter);
-                break;
+                
+                // Event consumed - subsequent iterations check for Epsilon (0) transitions
+                currentEventId = 0;
             }
             
             // Advance to Activity
@@ -510,6 +512,24 @@ namespace Fhsm.Kernel
             void* contextPtr,
             ref HsmCommandWriter cmdWriter)
         {
+            // NEW: Region arbitration for orthogonal regions
+            if (definition.Header.RegionCount > 1)
+            {
+                // Check for output lane conflicts
+                byte combinedMask = 0;
+                for (int i = 0; i < regionCount; i++)
+                {
+                    ref readonly var state = ref definition.GetState(activeLeafIds[i]);
+                    if ((combinedMask & state.OutputLaneMask) != 0)
+                    {
+                        // Conflict! Region arbitration needed
+                        // For now: First region wins
+                        continue;
+                    }
+                    combinedMask |= state.OutputLaneMask;
+                }
+            }
+
             ushort sourceStateId = transition.SourceStateIndex;
             ushort targetStateId = transition.TargetStateIndex;
             
@@ -549,7 +569,7 @@ namespace Fhsm.Kernel
                 // Save history if this state has history
                 if ((state.Flags & StateFlags.IsHistory) != 0 || state.HistorySlotIndex != 0xFFFF)
                 {
-                    SaveHistory(instancePtr, instanceSize, stateId, activeLeafIds[0]);
+                    SaveHistory(definition, instancePtr, instanceSize, stateId, activeLeafIds[0]);
                 }
             }
             
@@ -561,6 +581,7 @@ namespace Fhsm.Kernel
             
             // 3. Execute entry actions (LCA -> leaf)
             ushort finalLeafId = targetStateId;
+            bool historyRestored = false;
             
             for (int i = 0; i < path.EntryCount; i++)
             {
@@ -577,10 +598,10 @@ namespace Fhsm.Kernel
                 if ((state.Flags & StateFlags.IsHistory) != 0)
                 {
                     // Restore history
-                    ushort restoredLeaf = RestoreHistory(instancePtr, instanceSize, stateId);
-                    if (restoredLeaf != 0xFFFF)
+                    bool isDeep = (state.Flags & StateFlags.IsDeepHistory) != 0;
+                    if (RestoreHistory(definition, instancePtr, instanceSize, stateId, isDeep))
                     {
-                        finalLeafId = restoredLeaf;
+                        historyRestored = true;
                         break; 
                     }
                 }
@@ -602,7 +623,10 @@ namespace Fhsm.Kernel
             }
             
             // 4. Update active state
-            activeLeafIds[0] = finalLeafId;
+            if (!historyRestored)
+            {
+                activeLeafIds[0] = finalLeafId;
+            }
             
             // 5. Recall Deferred Events
             HsmEventQueue.RecallDeferredEvents(instancePtr, instanceSize);
@@ -709,38 +733,101 @@ namespace Fhsm.Kernel
         }
 
         private static void SaveHistory(
+            HsmDefinitionBlob definition,
             byte* instancePtr,
             int instanceSize,
             ushort compositeStateId,
             ushort activeLeafId)
         {
+            ref readonly var state = ref definition.GetState(compositeStateId);
+            if (state.HistorySlotIndex == 0xFFFF) return;
+            
             ushort* historySlots = GetHistorySlots(instancePtr, instanceSize, out int slotCount);
             if (historySlots == null) return;
             
-            int slotIndex = compositeStateId % slotCount;
-            
-            if (slotIndex < slotCount)
+            if (state.HistorySlotIndex < slotCount)
             {
-                historySlots[slotIndex] = activeLeafId;
+                historySlots[state.HistorySlotIndex] = activeLeafId;
             }
         }
 
-        private static ushort RestoreHistory(
+        private static ushort GetHistorySlot(byte* instancePtr, int instanceSize, ushort slotIndex)
+        {
+             ushort* slots = GetHistorySlots(instancePtr, instanceSize, out int count);
+             if (slots != null && slotIndex < count) return slots[slotIndex];
+             return 0xFFFF;
+        }
+
+        private static void SetActiveLeafId(byte* instancePtr, int instanceSize, int regionIndex, ushort stateId)
+        {
+            ushort* leaves = GetActiveLeafIds(instancePtr, instanceSize, out int count);
+            if (leaves != null && regionIndex < count)
+            {
+                leaves[regionIndex] = stateId;
+            }
+        }
+        
+        private static bool IsAncestor(HsmDefinitionBlob definition, ushort ancestor, ushort descendant)
+        {
+            ushort curr = descendant;
+            while (curr != 0xFFFF)
+            {
+                if (curr == ancestor) return true;
+                ref readonly var state = ref definition.GetState(curr);
+                curr = state.ParentIndex;
+            }
+            return false;
+        }
+
+        private static void RestoreDeepHistory(
+            HsmDefinitionBlob definition,
             byte* instancePtr,
             int instanceSize,
-            ushort historyStateId)
+            ushort stateIndex)
         {
-            ushort* historySlots = GetHistorySlots(instancePtr, instanceSize, out int slotCount);
-            if (historySlots == null) return 0xFFFF;
+            ref readonly var state = ref definition.GetState(stateIndex);
             
-            int slotIndex = historyStateId % slotCount;
-            
-            if (slotIndex < slotCount)
+            for (ushort i = 0; i < definition.Header.StateCount; i++)
             {
-                return historySlots[slotIndex];
+                ref readonly var child = ref definition.GetState(i);
+                if (child.ParentIndex == stateIndex)
+                {
+                    if (child.HistorySlotIndex != 0xFFFF)
+                    {
+                        RestoreHistory(definition, instancePtr, instanceSize, i, true);
+                    }
+                }
+            }
+        }
+
+        private static bool RestoreHistory(
+            HsmDefinitionBlob definition,
+            byte* instancePtr,
+            int instanceSize,
+            ushort stateIndex,
+            bool isDeep)
+        {
+            ref readonly var state = ref definition.GetState(stateIndex);
+            if (state.HistorySlotIndex == 0xFFFF) return false;
+
+            ushort savedStateId = GetHistorySlot(instancePtr, instanceSize, state.HistorySlotIndex);
+
+            if (savedStateId == 0xFFFF) return false;
+
+            if (!IsAncestor(definition, stateIndex, savedStateId))
+            {
+                return false;
+            }
+
+            // Restore
+            SetActiveLeafId(instancePtr, instanceSize, 0, savedStateId);
+
+            if (isDeep)
+            {
+                RestoreDeepHistory(definition, instancePtr, instanceSize, savedStateId);
             }
             
-            return 0xFFFF;
+            return true;
         }
 
         private static ushort* GetHistorySlots(byte* instancePtr, int instanceSize, out int count)

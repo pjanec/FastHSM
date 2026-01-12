@@ -14,8 +14,8 @@ namespace Fhsm.Kernel.Data
         private readonly TransitionDef[] _transitions;
         private readonly RegionDef[] _regions;
         private readonly GlobalTransitionDef[] _globalTransitions;
-        private readonly ushort[] _actionIds;
-        private readonly ushort[] _guardIds;
+        private readonly LinkerTableEntry[] _actionTable;
+        private readonly LinkerTableEntry[] _guardTable;
         
         public HsmDefinitionBlob()
         {
@@ -23,10 +23,42 @@ namespace Fhsm.Kernel.Data
             _transitions = Array.Empty<TransitionDef>();
             _regions = Array.Empty<RegionDef>();
             _globalTransitions = Array.Empty<GlobalTransitionDef>();
-            _actionIds = Array.Empty<ushort>();
-            _guardIds = Array.Empty<ushort>();
+            _actionTable = Array.Empty<LinkerTableEntry>();
+            _guardTable = Array.Empty<LinkerTableEntry>();
         }
 
+        // Primary Constructor (Internal/Factory usage)
+        private HsmDefinitionBlob(
+            HsmDefinitionHeader header,
+            StateDef[] states,
+            TransitionDef[] transitions,
+            RegionDef[] regions,
+            GlobalTransitionDef[] globalTransitions,
+            LinkerTableEntry[] actionTable,
+            LinkerTableEntry[] guardTable)
+        {
+            Header = header;
+            _states = states ?? Array.Empty<StateDef>();
+            _transitions = transitions ?? Array.Empty<TransitionDef>();
+            _regions = regions ?? Array.Empty<RegionDef>();
+            _globalTransitions = globalTransitions ?? Array.Empty<GlobalTransitionDef>();
+            _actionTable = actionTable ?? Array.Empty<LinkerTableEntry>();
+            _guardTable = guardTable ?? Array.Empty<LinkerTableEntry>();
+        }
+
+        public static HsmDefinitionBlob CreateWithLinkerTables(
+            HsmDefinitionHeader header,
+            StateDef[] states,
+            TransitionDef[] transitions,
+            RegionDef[] regions,
+            GlobalTransitionDef[] globalTransitions,
+            LinkerTableEntry[] actionTable,
+            LinkerTableEntry[] guardTable)
+        {
+            return new HsmDefinitionBlob(header, states, transitions, regions, globalTransitions, actionTable, guardTable);
+        }
+
+        // Compatibility Constructor (Public)
         public HsmDefinitionBlob(
             HsmDefinitionHeader header,
             StateDef[] states,
@@ -41,8 +73,15 @@ namespace Fhsm.Kernel.Data
             _transitions = transitions ?? Array.Empty<TransitionDef>();
             _regions = regions ?? Array.Empty<RegionDef>();
             _globalTransitions = globalTransitions ?? Array.Empty<GlobalTransitionDef>();
-            _actionIds = actionIds ?? Array.Empty<ushort>();
-            _guardIds = guardIds ?? Array.Empty<ushort>();
+            
+            // Convert ushort[] to LinkerTableEntry[]
+            _actionTable = new LinkerTableEntry[actionIds?.Length ?? 0];
+            if (actionIds != null)
+                for(int i=0; i<actionIds.Length; i++) _actionTable[i] = new LinkerTableEntry { FunctionId = actionIds[i] };
+
+            _guardTable = new LinkerTableEntry[guardIds?.Length ?? 0];
+            if (guardIds != null)
+                for(int i=0; i<guardIds.Length; i++) _guardTable[i] = new LinkerTableEntry { FunctionId = guardIds[i] };
         }
         
         // Span accessors only
@@ -50,8 +89,8 @@ namespace Fhsm.Kernel.Data
         public ReadOnlySpan<TransitionDef> Transitions => _transitions;
         public ReadOnlySpan<RegionDef> Regions => _regions;
         public ReadOnlySpan<GlobalTransitionDef> GlobalTransitions => _globalTransitions;
-        public ReadOnlySpan<ushort> ActionIds => _actionIds;
-        public ReadOnlySpan<ushort> GuardIds => _guardIds;
+        public ReadOnlySpan<LinkerTableEntry> ActionTable => _actionTable.AsSpan();
+        public ReadOnlySpan<LinkerTableEntry> GuardTable => _guardTable.AsSpan();
 
         // Indexed accessors with bounds checking
         public ref readonly StateDef GetState(int index)

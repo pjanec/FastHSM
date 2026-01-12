@@ -136,10 +136,9 @@ namespace Fhsm.Demo.Visual.UI
                 {
                     // Render children
                     ushort childId = state.FirstChildIndex;
-                    while (childId != 0xFFFF)
+                    for (int i = 0; i < state.ChildCount; i++)
                     {
-                        RenderStateNode(blob, childId, activeStates, depth + 1, metadata);
-                        childId = blob.States[childId].NextSiblingIndex;
+                        RenderStateNode(blob, (ushort)(childId + i), activeStates, depth + 1, metadata);
                     }
                     
                     ImGui.TreePop();

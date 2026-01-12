@@ -113,4 +113,20 @@ namespace Fhsm.Kernel.Data
         Reserved6 = 1 << 6,
         Reserved7 = 1 << 7,
     }
+
+    /// <summary>
+    /// Command buffer lanes for prioritization.
+    /// </summary>
+    public enum CommandLane : byte
+    {
+        Animation = 0,
+        Navigation = 1,
+        Gameplay = 2,
+        Blackboard = 3,
+        Audio = 4,
+        VFX = 5,
+        Message = 6,
+        Count = 7
+    }
 }
+

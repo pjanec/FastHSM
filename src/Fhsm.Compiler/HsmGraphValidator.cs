@@ -50,8 +50,76 @@ namespace Fhsm.Compiler
             ValidateFunctions(graph, errors);
             ValidateLimits(graph, errors);
             ValidateIndirectEvents(graph, errors);
+            ValidateSlotConflicts(graph, errors);
             
             return errors;
+        }
+
+        private static void ValidateSlotConflicts(StateMachineGraph graph, List<ValidationError> errors)
+        {
+            // For each state with orthogonal regions
+            foreach (var state in graph.States.Values)
+            {
+                if (state.Children.Count < 2) continue; // No orthogonal regions
+                if (!state.IsParallel) continue;
+                
+                // Build exclusion graph: which slots are used in which region
+                var timerSlots = new Dictionary<int, List<string>>();
+                var historySlots = new Dictionary<int, List<string>>();
+                
+                foreach (var region in state.Children)
+                {
+                    CollectSlotUsage(region, timerSlots, historySlots);
+                }
+                
+                // Check for conflicts (same slot in multiple regions)
+                foreach (var kvp in timerSlots)
+                {
+                    if (kvp.Value.Count > 1)
+                    {
+                        errors.Add(new ValidationError(
+                            $"Timer slot {kvp.Key} used in multiple regions: {string.Join(", ", kvp.Value)}", state.Name)
+                        { Severity = ErrorSeverity.Error });
+                    }
+                }
+                
+                foreach (var kvp in historySlots)
+                {
+                    if (kvp.Value.Count > 1)
+                    {
+                        errors.Add(new ValidationError(
+                            $"History slot {kvp.Key} used in multiple regions: {string.Join(", ", kvp.Value)}", state.Name)
+                        { Severity = ErrorSeverity.Error });
+                    }
+                }
+            }
+        }
+
+        private static void CollectSlotUsage(
+            StateNode region, 
+            Dictionary<int, List<string>> timerSlots,
+            Dictionary<int, List<string>> historySlots)
+        {
+            // Recursively collect timer/history slot usage
+            if (region.TimerSlotIndex >= 0)
+            {
+                if (!timerSlots.ContainsKey(region.TimerSlotIndex))
+                    timerSlots[region.TimerSlotIndex] = new List<string>();
+                timerSlots[region.TimerSlotIndex].Add(region.Name);
+            }
+            
+            if (region.HistorySlotIndex != 0xFFFF)
+            {
+                int slot = region.HistorySlotIndex;
+                if (!historySlots.ContainsKey(slot))
+                    historySlots[slot] = new List<string>();
+                historySlots[slot].Add(region.Name);
+            }
+            
+            foreach (var child in region.Children)
+            {
+                CollectSlotUsage(child, timerSlots, historySlots);
+            }
         }
 
         private static void ValidateIndirectEvents(StateMachineGraph graph, List<ValidationError> errors)

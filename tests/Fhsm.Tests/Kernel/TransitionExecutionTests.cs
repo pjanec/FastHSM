@@ -107,12 +107,14 @@ namespace Fhsm.Tests.Kernel
             { 
                 ParentIndex = 0xFFFF,
                 Flags = StateFlags.IsHistory, // 2
-                HistorySlotIndex = 0
+                HistorySlotIndex = 0,
+                // Ensure other potential slots are None
+                TimerSlotIndex = 0xFFFF
             };
             
-            states[1] = new StateDef { ParentIndex = 0, FirstTransitionIndex = 0, TransitionCount = 1 };
-            states[2] = new StateDef { ParentIndex = 0, FirstTransitionIndex = 1, TransitionCount = 1 };
-            states[3] = new StateDef { ParentIndex = 0xFFFF, FirstTransitionIndex = 2, TransitionCount = 1 };
+            states[1] = new StateDef { ParentIndex = 0, FirstTransitionIndex = 0, TransitionCount = 1, HistorySlotIndex = 0xFFFF };
+            states[2] = new StateDef { ParentIndex = 0, FirstTransitionIndex = 1, TransitionCount = 1, HistorySlotIndex = 0xFFFF };
+            states[3] = new StateDef { ParentIndex = 0xFFFF, FirstTransitionIndex = 2, TransitionCount = 1, HistorySlotIndex = 0xFFFF };
             
             var transitions = new TransitionDef[3];
             transitions[0] = new TransitionDef { SourceStateIndex = 1, TargetStateIndex = 3, EventId = 10 };

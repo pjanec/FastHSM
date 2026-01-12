@@ -65,11 +65,11 @@ namespace Fhsm.Tests.Compiler
             
             // C1
             Assert.Equal(1, data.States[2].ParentIndex); // P
-            Assert.Equal(3, data.States[2].NextSiblingIndex); // C2
+            // Assertion removed: NextSiblingIndex field was removed
             
             // C2
             Assert.Equal(1, data.States[3].ParentIndex); // P
-            Assert.Equal(0xFFFF, data.States[3].NextSiblingIndex); // None
+            // Assertion removed: NextSiblingIndex field was removed
         }
 
         [Fact]

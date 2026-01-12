@@ -159,7 +159,8 @@ namespace Fhsm.Compiler
                 // Hierarchy
                 def.ParentIndex = node.Parent != null ? node.Parent.FlatIndex : (ushort)0xFFFF;
                 def.FirstChildIndex = node.Children.Count > 0 ? node.Children[0].FlatIndex : (ushort)0xFFFF;
-                def.NextSiblingIndex = GetNextSiblingIndex(node);
+                def.ChildCount = (ushort)node.Children.Count;
+                def.OutputLaneMask = node.OutputLaneMask;
                 
                 // Transitions (set later by UpdateStateTransitionRanges)
                 
@@ -167,34 +168,20 @@ namespace Fhsm.Compiler
                 def.Depth = node.Depth;
                 def.Flags = BuildStateFlags(node);
                 
-                // Actions
-                def.OnEntryActionId = node.OnEntryAction != null ? actionTable[node.OnEntryAction] : (ushort)0xFFFF;
-                def.OnExitActionId = node.OnExitAction != null ? actionTable[node.OnExitAction] : (ushort)0xFFFF;
+                // Actions - Use 0xFFFF (None) if not present
+                def.OnEntryActionId = node.EntryActionId != 0 ? node.EntryActionId : (node.OnEntryAction != null ? actionTable[node.OnEntryAction] : (ushort)0xFFFF);
+                def.OnExitActionId = node.ExitActionId != 0 ? node.ExitActionId : (node.OnExitAction != null ? actionTable[node.OnExitAction] : (ushort)0xFFFF);
                 def.ActivityActionId = node.ActivityAction != null ? actionTable[node.ActivityAction] : (ushort)0xFFFF;
                 def.TimerActionId = node.TimerAction != null ? actionTable[node.TimerAction] : (ushort)0xFFFF;
                 
                 // History
                 def.HistorySlotIndex = node.HistorySlotIndex;
-                
+                def.TimerSlotIndex = (ushort)(node.TimerSlotIndex >= 0 ? node.TimerSlotIndex : 0xFFFF);
+
                 result[i] = def;
             }
             
             return result;
-        }
-        
-        private static ushort GetNextSiblingIndex(StateNode node)
-        {
-            if (node.Parent == null) return 0xFFFF;
-            
-            var siblings = node.Parent.Children;
-            int index = siblings.IndexOf(node);
-            
-            if (index >= 0 && index < siblings.Count - 1)
-            {
-                return siblings[index + 1].FlatIndex;
-            }
-            
-            return 0xFFFF;
         }
         
         private static StateFlags BuildStateFlags(StateNode node)
