@@ -33,7 +33,8 @@ namespace Fhsm.Kernel
             header.Phase = InstancePhase.Idle; 
             // Seed could be set by caller or rng. For now 0 or default is fine.
             
-            // Queue counters zeroed by InitBlock
+            // 3. Mark as uninitialized (ActiveLeafIds = 0xFFFF)
+            HsmKernelCore.ResetInstance((byte*)instance, size);
         }
 
         /// <summary>
@@ -59,6 +60,9 @@ namespace Fhsm.Kernel
              header.Generation = (ushort)(generation + 1); // Increment generation
              header.RandomSeed = randomSeed;
              header.Phase = InstancePhase.Idle;
+
+             // Mark as uninitialized
+             HsmKernelCore.ResetInstance((byte*)instance, sizeof(T));
         }
 
         /// <summary>

@@ -79,6 +79,18 @@ namespace Fhsm.Kernel
             return true;
         }
         
+        /// <summary>
+        /// Reset instance internals (set active states to 0xFFFF).
+        /// </summary>
+        public static void ResetInstance(byte* instancePtr, int instanceSize)
+        {
+            ushort* activeLeafIds = GetActiveLeafIds(instancePtr, instanceSize, out int count);
+            if (activeLeafIds != null)
+            {
+                for (int i = 0; i < count; i++) activeLeafIds[i] = 0xFFFF;
+            }
+        }
+        
         private static void ProcessInstancePhase(
             HsmDefinitionBlob definition,
             byte* instancePtr,
@@ -101,8 +113,21 @@ namespace Fhsm.Kernel
                     break;
                     
                 case InstancePhase.Entry:
-                    // Advance to Event processing
-                    ProcessEventPhase(definition, instancePtr, instanceSize, contextPtr);
+                    {
+                        // Check if uninitialized
+                        ushort* activeLeafIds = GetActiveLeafIds(instancePtr, instanceSize, out int regionCount);
+                        if (activeLeafIds != null && activeLeafIds[0] == 0xFFFF)
+                        {
+                            InitializeMachine(definition, instancePtr, instanceSize, contextPtr, activeLeafIds);
+                            
+                            // Advance to Activity immediately (skip event phase this tick)
+                            header->Phase = InstancePhase.Activity;
+                            break;
+                        }
+                    
+                        // Advance to Event processing
+                        ProcessEventPhase(definition, instancePtr, instanceSize, contextPtr);
+                    }
                     break;
                     
                 case InstancePhase.RTC:
@@ -114,6 +139,57 @@ namespace Fhsm.Kernel
                     ProcessActivityPhase(definition, instancePtr, instanceSize, contextPtr, deltaTime);
                     break;
             }
+        }
+
+        private static void InitializeMachine(
+            HsmDefinitionBlob definition,
+            byte* instancePtr,
+            int instanceSize,
+            void* contextPtr,
+            ushort* activeLeafIds)
+        {
+            if (definition.Header.StateCount == 0) return;
+
+            // 1. Find target state (Drill down from Root 0 to initial leaf)
+            ushort targetState = 0; // Assume Root is 0
+            
+            while (true)
+            {
+                ref readonly var state = ref definition.GetState(targetState);
+                if ((state.Flags & StateFlags.IsComposite) != 0 && state.FirstChildIndex != 0xFFFF)
+                {
+                    targetState = state.FirstChildIndex;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            
+            // 2. Compute Entry Path from Virtual Root (0xFFFF) to Target
+            TransitionPath path = ComputeLCA(definition, 0xFFFF, targetState);
+            
+            InstanceHeader* header = (InstanceHeader*)instancePtr;
+            if (_traceBuffer != null && (header->Flags & InstanceFlags.DebugTrace) != 0)
+            {
+                _traceBuffer.WriteStateChange(header->MachineId, targetState, true); // Log initial entry
+            }
+
+            // 3. Execute Entry Actions
+            for (int i = 0; i < path.EntryCount; i++)
+            {
+                ushort stateId = path.EntryPath[i];
+                ref readonly var state = ref definition.GetState(stateId);
+
+                // Execute OnEntry
+                if (state.OnEntryActionId != 0 && state.OnEntryActionId != 0xFFFF)
+                {
+                    ExecuteAction(state.OnEntryActionId, instancePtr, contextPtr, 0);
+                }
+            }
+            
+            // 4. Set Active State
+            activeLeafIds[0] = targetState;
         }
 
         // --- Task 1: Timer Phase ---

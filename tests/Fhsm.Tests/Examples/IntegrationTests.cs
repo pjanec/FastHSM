@@ -15,25 +15,25 @@ namespace Fhsm.Tests.Examples
         private static int _transitionCount = 0;
         
         [HsmAction(Name = "TestEntry")]
-        public static void TestEntry(void* instance, void* context, ushort eventId)
+        internal static void TestEntry(void* instance, void* context, ushort eventId)
         {
             _entryCount++;
         }
         
         [HsmAction(Name = "TestExit")]
-        public static void TestExit(void* instance, void* context, ushort eventId)
+        internal static void TestExit(void* instance, void* context, ushort eventId)
         {
             _exitCount++;
         }
         
         [HsmAction(Name = "TestActivity")]
-        public static void TestActivity(void* instance, void* context, ushort eventId)
+        internal static void TestActivity(void* instance, void* context, ushort eventId)
         {
             _activityCount++;
         }
         
         [HsmAction(Name = "TestTransition")]
-        public static void TestTransition(void* instance, void* context, ushort eventId)
+        internal static void TestTransition(void* instance, void* context, ushort eventId)
         {
             _transitionCount++;
         }
@@ -51,6 +51,9 @@ namespace Fhsm.Tests.Examples
             var builder = new HsmBuilder("TestMachine");
             builder.Event("StartEvent", 1);
             builder.Event("Event10", 10);
+            
+            // Add Idle state as the default initial state (first child)
+            builder.State("Idle");
             
             var stateA = builder.State("A")
                 .OnEntry("TestEntry")

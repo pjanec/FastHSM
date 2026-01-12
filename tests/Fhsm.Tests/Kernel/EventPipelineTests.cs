@@ -11,7 +11,9 @@ namespace Fhsm.Tests.Kernel
     {
         private struct TestContext
         {
+#pragma warning disable CS0649
             public int Value;
+#pragma warning restore CS0649
         }
 
         private HsmDefinitionBlob CreateBlob(

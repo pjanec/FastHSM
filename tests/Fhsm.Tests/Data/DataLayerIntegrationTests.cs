@@ -3,6 +3,8 @@ using Fhsm.Kernel;
 using Fhsm.Kernel.Data;
 using Xunit;
 
+#pragma warning disable CS8625
+
 namespace Fhsm.Tests.Data
 {
     public class DataLayerIntegrationTests
