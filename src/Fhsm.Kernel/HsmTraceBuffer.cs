@@ -163,6 +163,33 @@ namespace Fhsm.Kernel
         }
         
         /// <summary>
+        /// Write a conflict trace record.
+        /// </summary>
+        public void WriteConflict(uint instanceId, ushort stateIndex, byte attemptedLanes, byte conflictingLanes)
+        {
+            // Conflicts are important, logging at Tier1 or Tier2?
+            // Instructions say: "For v1.0: Log conflict (if tracing enabled)"
+            // Assuming it aligns with Transitions/Events level (Tier 1) or Error?
+            // Let's assume Tier1 since it affects behavior.
+            if (_filterLevel == TraceLevel.None) return;
+
+            var record = new ConflictRecord
+            {
+                Header = new TraceRecordHeader
+                {
+                    OpCode = TraceOpCode.Conflict,
+                    Timestamp = _currentTick,
+                    InstanceId = instanceId
+                },
+                StateIndex = stateIndex,
+                AttemptedLanes = attemptedLanes,
+                ConflictingLanes = conflictingLanes
+            };
+
+            WriteRecord(ref record, sizeof(ConflictRecord));
+        }
+
+        /// <summary>
         /// Write an error trace record.
         /// </summary>
         public void WriteError(uint instanceId, ushort errorCode)

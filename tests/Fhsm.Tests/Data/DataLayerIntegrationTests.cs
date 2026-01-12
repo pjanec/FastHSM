@@ -76,7 +76,7 @@ namespace Fhsm.Tests.Data
                 
                 Assert.Equal(0x12345678u, inst.Header.MachineId);
                 Assert.Equal(1, inst.Header.Generation);
-                Assert.Equal(InstancePhase.Idle, inst.Header.Phase);
+                Assert.Equal(InstancePhase.Entry, inst.Header.Phase);
                 Assert.Equal(InstanceFlags.None, inst.Header.Flags);
             }
         }
@@ -97,7 +97,7 @@ namespace Fhsm.Tests.Data
                 Assert.Equal(0x1111u, inst.Header.MachineId);
                 Assert.Equal(11, inst.Header.Generation);
                 Assert.Equal(0x9999u, inst.Header.RngState);
-                Assert.Equal(InstancePhase.Idle, inst.Header.Phase);
+                Assert.Equal(InstancePhase.Entry, inst.Header.Phase);
             }
         }
 

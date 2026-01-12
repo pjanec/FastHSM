@@ -108,9 +108,11 @@ A bot gathers resources and returns them to base.
 
 ```csharp
 [HsmAction]
-public static unsafe void GatheringActivity(void* instance, void* context, ushort eventId)
+public static unsafe void GatheringActivity(void* instance, void* context, HsmCommandWriter* writer)
 {
     var bot = (BotContext*)context;
+    // Note: Activities typically don't write commands unless they spawn effects
+    // but the signature requires it.
     bot.Resources += bot.GatherRate * DeltaTime;
 }
 
@@ -123,3 +125,28 @@ public static unsafe bool IsFull(void* instance, void* context, ushort eventId)
 ```
 
 This pattern keeps the status check logic outside the State Machine structure itself (via Guard) and keeps the behavior in the Activity.
+
+---
+
+## 4. Using Command Buffers
+
+Integration with game engine command buffers allows running HSMs in parallel jobs without thread-safety issues.
+
+```csharp
+[HsmAction(Name = "SpawnParticle")]
+public static unsafe void SpawnParticle(void* instance, void* context, HsmCommandWriter* writer)
+{
+    var ctx = (GameContext*)context;
+    
+    // Write command to buffer
+    var cmd = new ParticleSpawnCommand
+    {
+        Position = ctx->PlayerPosition,
+        Color = 0xFF00FF00
+    };
+    
+    // Allocate stack span for casting
+    Span<byte> cmdBytes = new Span<byte>(&cmd, sizeof(ParticleSpawnCommand));
+    writer->TryWriteCommand(cmdBytes);
+}
+```

@@ -83,11 +83,11 @@ public static class HsmNormalizer
 ```csharp
 public static class HsmGraphValidator
 {
-    public static bool Validate(HsmGraph graph, out List<string> errors);
+    public static List<ValidationError> Validate(HsmGraph graph);
 }
 ```
 
-- **Validate()**: Checks for structural errors (orphaned states, missing initial states, duplicate transitions). Returns `true` if valid.
+- **Validate()**: Checks for structural errors. Returns a list of errors (empty if valid).
 
 ### `HsmFlattener`
 
@@ -110,6 +110,20 @@ public static class HsmEmitter
 ```
 
 - **Emit()**: Produces the final, immutable `HsmDefinitionBlob` used by the runtime.
+
+- **Emit()**: Produces the final, immutable `HsmDefinitionBlob` used by the runtime.
+
+### `XxHash64`
+
+High-performance non-cryptographic hash function.
+
+```csharp
+public static class XxHash64
+{
+    public static ulong ComputeHash(ReadOnlySpan<byte> data);
+    public static ulong ComputeHash(string text);
+}
+```
 
 ---
 
@@ -186,6 +200,58 @@ public class HsmTraceBuffer
 To use, set the static buffer:
 `HsmKernelCore.SetTraceBuffer(myBuffer);`
 
+### `TraceSymbolicator`
+
+Utility to convert binary trace records into human-readable strings using the `HsmDefinitionBlob`.
+
+```csharp
+public class TraceSymbolicator
+{
+    public TraceSymbolicator(HsmDefinitionBlob definition);
+    public string Symbolicate(ReadOnlySpan<byte> traceRecord);
+}
+```
+
+### `HsmDefinitionRegistry`
+
+Thread-safe registry to store and retrieve machine definitions by ID.
+
+```csharp
+public static class HsmDefinitionRegistry
+{
+    public static void Register(HsmDefinitionBlob blob);
+    public static HsmDefinitionBlob Get(uint structureHash);
+}
+```
+
+### `HsmCommandAllocator`
+
+Helper for allocating command pages.
+
+```csharp
+public static class HsmCommandAllocator
+{
+    public static unsafe CommandPage* AllocatePage();
+    public static unsafe void FreePage(CommandPage* page);
+}
+```
+
+### `HsmRng`
+
+Deterministic Random Number Generator.
+
+```csharp
+public unsafe ref struct HsmRng
+{
+    public HsmRng(uint* seedPtr);
+    public float NextFloat();
+    public int NextInt(int min, int max);
+    public bool NextBool();
+}
+```
+
+- **Usage**: Initialize with `&instance->Header.RngState`. Guaranteed deterministic sequence for replays.
+
 ---
 
 ## Namespace: Fhsm.Kernel.Data
@@ -237,19 +303,22 @@ Marks a static method as an Action.
 
 ```csharp
 [HsmAction(Name = "MyAction")]
-public static unsafe void MyAction(void* instance, void* context, ushort eventId) { ... }
+public static unsafe void MyAction(void* instance, void* context, HsmCommandWriter* writer) { ... }
 ```
 
 - **Name**: Optional override for the reference string used in the Builder.
+- **UsesRNG**: Set to `true` (`[HsmAction(UsesRNG=true)]`) if the action uses the deterministic RNG.
 
 ### `[HsmGuard]`
 
 Marks a static method as a Guard.
 
 ```csharp
-[HsmGuard(Name = "MyGuard")]
+[HsmGuard(Name = "MyGuard", UsesRNG = false)]
 public static unsafe bool MyGuard(void* instance, void* context, ushort eventId) { ... }
 ```
+
+- **UsesRNG**: Set to `true` if the guard uses the deterministic RNG.
 
 ---
 

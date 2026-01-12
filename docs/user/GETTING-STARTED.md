@@ -158,7 +158,7 @@ using Fhsm.Kernel.Attributes;
 public static unsafe class SwitchActions
 {
     [HsmAction(Name = "TurnLightOn")]
-    public static void TurnLightOn(void* instance, void* context, ushort eventId)
+    public static void TurnLightOn(void* instance, void* context, HsmCommandWriter* writer)
     {
         Console.WriteLine("💡 Light is ON");
         
@@ -168,11 +168,28 @@ public static unsafe class SwitchActions
     }
 
     [HsmAction(Name = "TurnLightOff")]
-    public static void TurnLightOff(void* instance, void* context, ushort eventId)
+    public static void TurnLightOff(void* instance, void* context, HsmCommandWriter* writer)
     {
         Console.WriteLine("🌑 Light is OFF");
     }
 }
+```
+
+### Using Deterministic RNG
+
+FastHSM provides a built-in deterministic Random Number Generator (RNG) for replays and simulations.
+
+```csharp
+[HsmAction(Name = "RandomMove")]
+public static unsafe void RandomMove(void* instance, void* context, HsmCommandWriter* writer)
+{
+    var inst = (HsmInstance64*)instance;
+    var rng = new HsmRng(&inst->Header.RngState);
+    
+    float angle = rng.NextFloat() * MathF.PI * 2f;
+    // Use angle for random movement
+}
+```
 ```
 
 ### Step 4.2: Bind Actions in Builder

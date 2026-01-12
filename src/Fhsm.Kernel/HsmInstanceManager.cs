@@ -30,7 +30,7 @@ namespace Fhsm.Kernel
             
             header.MachineId = definition.Header.StructureHash;
             header.Generation = 1;
-            header.Phase = InstancePhase.Idle; 
+            header.Phase = InstancePhase.Entry; // Start in Entry to trigger initialization 
             // Seed could be set by caller or rng. For now 0 or default is fine.
             
             // 3. Mark as uninitialized (ActiveLeafIds = 0xFFFF)
@@ -59,7 +59,7 @@ namespace Fhsm.Kernel
              header.MachineId = machineId;
              header.Generation = (ushort)(generation + 1); // Increment generation
              header.RngState = rngState;
-             header.Phase = InstancePhase.Idle;
+             header.Phase = InstancePhase.Entry;
 
              // Mark as uninitialized
              HsmKernelCore.ResetInstance((byte*)instance, sizeof(T));

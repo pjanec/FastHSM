@@ -230,6 +230,9 @@ namespace Fhsm.Compiler
             {
                 if (state.Children.Count > 0)
                 {
+                    // Parallel states implicitly enter all children, so no single initial child required
+                    if (state.IsParallel) continue;
+
                     // Composite: must have exactly one initial
                     var initialCount = state.Children.Count(c => c.IsInitial);
                     

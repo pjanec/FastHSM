@@ -162,17 +162,99 @@ namespace Fhsm.Kernel
             // Initialize RNG
             if (header->RngState == 0)
             {
-                header->RngState = 0x5EEDCAFE; // Ensure non-zero default
+                header->RngState = 0x5EEDCAFE; 
             }
 
-            // 1. Find target state (Drill down from Root 0 to initial leaf)
-            ushort targetState = 0; // Assume Root is 0
+            // 1. Initialize Root (Slot 0)
+            InitializeSlot(definition, instancePtr, instanceSize, contextPtr, activeLeafIds, ref cmdWriter, 0, 0, 0xFFFF);
+            
+            // 2. Initialize Orthogonal Regions
+            var regions = definition.Regions;
+            int totalSlots = definition.Header.RegionCount;
+            
+            // Iterative initialization: if parent of a region becomes active, initialize that region
+            bool changed = true;
+            // Limit loop to avoid infinite in case of cycles (though unlikely)
+            int loopGuard = 0;
+            while (changed && loopGuard < 16)
+            {
+                changed = false;
+                loopGuard++;
+                
+                for (int r = 1; r < regions.Length; r++) // Skip 0 (Root/Default)
+                {
+                    // Assuming RegionDef array order matches Slot Indices 1..N ?
+                    // Actually, FlattenRegions logic creates RegionDefs in order.
+                    // If we assume RegionDef[i] -> Slot[i].
+                    // activeLeafIds has size of Header.RegionCount.
+                    // If RegionCount > regions.Length (because Root not in array?),
+                    // In FlattenRegions I added root at index 0.
+                    // So RegionDef[i] corresponds directly to Slot[i].
+                    
+                    if (r >= totalSlots) break;
+                    if (activeLeafIds[r] != 0xFFFF) continue; // Already initialized
+
+                    ref readonly var region = ref regions[r];
+                    ushort parent = region.ParentStateIndex;
+
+                    // Check if parent is active in any initialized slot
+                    bool parentActive = false;
+                    for (int s = 0; s < totalSlots; s++)
+                    {
+                        if (activeLeafIds[s] != 0xFFFF)
+                        {
+                            if (IsAncestor(definition, activeLeafIds[s], parent))
+                            {
+                                parentActive = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (parentActive)
+                    {
+                         InitializeSlot(definition, instancePtr, instanceSize, contextPtr, activeLeafIds, ref cmdWriter, r, region.InitialStateIndex, region.ParentStateIndex);
+                         changed = true;
+                    }
+                }
+            }
+        }
+
+        private static void InitializeSlot(
+            HsmDefinitionBlob definition,
+            byte* instancePtr,
+            int instanceSize,
+            void* contextPtr,
+            ushort* activeLeafIds,
+            ref HsmCommandWriter cmdWriter,
+            int slotIndex,
+            ushort startState,
+            ushort fromParent)
+        {
+             InstanceHeader* header = (InstanceHeader*)instancePtr;
+            
+            // 1. Find target state (Drill down)
+            ushort targetState = startState;
             
             while (true)
             {
                 ref readonly var state = ref definition.GetState(targetState);
                 if ((state.Flags & StateFlags.IsComposite) != 0 && state.FirstChildIndex != 0xFFFF)
                 {
+                    // If parallel, we stop here? No, parallel usually doesn't have "FirstChild" semantics for initial state.
+                    // Validator ensures we don't rely on initial for parallel.
+                    // BUT IsComposite is true.
+                    // If parallel, we should probably stop drill down for THIS slot,
+                    // as children will be handled by other regions.
+                    // BUT we need to enter the parallel state itself.
+                    // IsParallel is set on the state.
+                    
+                    if ((state.Flags & StateFlags.IsParallel) != 0)
+                    {
+                        // Stop at parallel state, it is the leaf for this slot
+                        break;
+                    }
+                    
                     targetState = state.FirstChildIndex;
                 }
                 else
@@ -181,12 +263,36 @@ namespace Fhsm.Kernel
                 }
             }
             
-            // 2. Compute Entry Path from Virtual Root (0xFFFF) to Target
-            TransitionPath path = ComputeLCA(definition, 0xFFFF, targetState);
+            // 2. Compute Entry Path
+            // fromParent is the state that is already active (or None 0xFFFF).
+            // We path from fromParent -> Target.
+            // But if fromParent is the Parallel State (for orthogonal region),
+            // We path from Parallel -> Child -> ...Target.
+            
+            ushort ancestorsStart = fromParent;
+            
+            TransitionPath path = ComputeLCA(definition, ancestorsStart, targetState);
+            // Verify path? ComputeLCA assumes exiting ancestorsStart.
+            // But we are ENTERING ancestorsStart? No, ancestorsStart is already active (container).
+            // We are entering sub-states.
+            // ComputeLCA(A, B) returns exit A -> LCA -> enter B.
+            // If fromParent is ancestor of Target. LCA = fromParent.
+            // Exit count = 0. Entry path = fromParent -> ... -> Target.
+            // BUT EntryPath includes fromParent if it's the target? No.
+            // TransitionPath includes target in EntryPath.
+            // It EXCLUDES LCA in EntryPath?
+            // ComputeLCA implementation:
+            // path.EntryCount = ...
+            // path.EntryPath[i] = targetChain[commonDepth + i].
+            // targetChain includes LCA at commonDepth-1.
+            // So EntryPath starts AFTER LCA.
+            
+            // So if LCA == fromParent, EntryPath starts at child of fromParent.
+            // This is exactly what we want! We don't want to re-enter fromParent.
             
             if (_traceBuffer != null && (header->Flags & InstanceFlags.DebugTrace) != 0)
             {
-                _traceBuffer.WriteStateChange(header->MachineId, targetState, true); // Log initial entry
+                _traceBuffer.WriteStateChange(header->MachineId, targetState, true);
             }
 
             // 3. Execute Entry Actions
@@ -195,7 +301,6 @@ namespace Fhsm.Kernel
                 ushort stateId = path.EntryPath[i];
                 ref readonly var state = ref definition.GetState(stateId);
 
-                // Execute OnEntry
                 if (state.OnEntryActionId != 0 && state.OnEntryActionId != 0xFFFF)
                 {
                     ExecuteAction(state.OnEntryActionId, instancePtr, contextPtr, ref cmdWriter);
@@ -203,7 +308,7 @@ namespace Fhsm.Kernel
             }
             
             // 4. Set Active State
-            activeLeafIds[0] = targetState;
+            activeLeafIds[slotIndex] = targetState;
         }
 
         // --- Task 1: Timer Phase ---
@@ -513,21 +618,10 @@ namespace Fhsm.Kernel
             ref HsmCommandWriter cmdWriter)
         {
             // NEW: Region arbitration for orthogonal regions
+            // NEW: Region arbitration for orthogonal regions
             if (definition.Header.RegionCount > 1)
             {
-                // Check for output lane conflicts
-                byte combinedMask = 0;
-                for (int i = 0; i < regionCount; i++)
-                {
-                    ref readonly var state = ref definition.GetState(activeLeafIds[i]);
-                    if ((combinedMask & state.OutputLaneMask) != 0)
-                    {
-                        // Conflict! Region arbitration needed
-                        // For now: First region wins
-                        continue;
-                    }
-                    combinedMask |= state.OutputLaneMask;
-                }
+                ArbitrateOutputLanes(definition, instancePtr, activeLeafIds, regionCount);
             }
 
             ushort sourceStateId = transition.SourceStateIndex;
@@ -653,6 +747,56 @@ namespace Fhsm.Kernel
             }
         }
 
+        private static void ArbitrateOutputLanes(
+            HsmDefinitionBlob definition,
+            byte* instancePtr,
+            ushort* activeLeafIds,
+            int regionCount)
+        {
+            byte combinedMask = 0;
+            int firstRegionWithConflict = -1;
+            
+            for (int i = 0; i < regionCount; i++)
+            {
+                if (activeLeafIds[i] == 0xFFFF) continue; // Skip uninitialized regions
+                
+                ref readonly var state = ref definition.GetState(activeLeafIds[i]);
+                byte laneMask = state.OutputLaneMask;
+                
+                if (laneMask == 0) continue; // State writes to no lanes
+                
+                // Check for conflicts
+                if ((combinedMask & laneMask) != 0)
+                {
+                    // Conflict detected! First region wins.
+                    if (firstRegionWithConflict == -1)
+                    {
+                        firstRegionWithConflict = i;
+                    }
+                    
+                    // Suppress this region's output (clear its mask bits)
+                    // Implementation: Set a flag or skip command execution
+                    // For v1.0: Log conflict (if tracing enabled) and continue
+                    // Full arbitration with priority would be P4 (future)
+                    
+                    if (_traceBuffer != null)
+                    {
+                        InstanceHeader* header = (InstanceHeader*)instancePtr;
+                        _traceBuffer.WriteConflict(
+                            header->MachineId,
+                            activeLeafIds[i], 
+                            laneMask, 
+                            (byte)(combinedMask & laneMask)
+                        );
+                    }
+                }
+                else
+                {
+                    combinedMask |= laneMask;
+                }
+            }
+        }
+
         private static TransitionPath ComputeLCA(
             HsmDefinitionBlob definition,
             ushort sourceStateId,
@@ -760,24 +904,26 @@ namespace Fhsm.Kernel
 
         private static void SetActiveLeafId(byte* instancePtr, int instanceSize, int regionIndex, ushort stateId)
         {
-            ushort* leaves = GetActiveLeafIds(instancePtr, instanceSize, out int count);
-            if (leaves != null && regionIndex < count)
-            {
-                leaves[regionIndex] = stateId;
-            }
+             ushort* active = GetActiveLeafIds(instancePtr, instanceSize, out int count);
+             if (active != null && regionIndex < count) active[regionIndex] = stateId;
         }
-        
-        private static bool IsAncestor(HsmDefinitionBlob definition, ushort ancestor, ushort descendant)
+
+        private static bool IsAncestor(HsmDefinitionBlob definition, ushort descendant, ushort ancestor)
         {
-            ushort curr = descendant;
-            while (curr != 0xFFFF)
+            if (descendant == ancestor) return true;
+            
+            ushort current = descendant;
+            while (current != 0xFFFF)
             {
-                if (curr == ancestor) return true;
-                ref readonly var state = ref definition.GetState(curr);
-                curr = state.ParentIndex;
+                if (current == ancestor) return true;
+                ref readonly var state = ref definition.GetState(current);
+                current = state.ParentIndex;
             }
             return false;
         }
+
+        
+
 
         private static void RestoreDeepHistory(
             HsmDefinitionBlob definition,
@@ -814,22 +960,73 @@ namespace Fhsm.Kernel
 
             if (savedStateId == 0xFFFF) return false;
 
-            if (!IsAncestor(definition, stateIndex, savedStateId))
+            // Verify the saved state is actually a descendant of the history state
+            if (!IsAncestor(definition, savedStateId, stateIndex))
             {
                 return false;
             }
 
             // Restore
-            SetActiveLeafId(instancePtr, instanceSize, 0, savedStateId);
-
             if (isDeep)
             {
+                SetActiveLeafId(instancePtr, instanceSize, 0, savedStateId);
                 RestoreDeepHistory(definition, instancePtr, instanceSize, savedStateId);
+            }
+            else
+            {
+                // Shallow History: Restore the direct child of the composite state
+                // We need to find the ancestor of savedStateId that is a child of stateIndex
+                ushort target = savedStateId;
+                
+                if (definition.GetState(target).ParentIndex != stateIndex)
+                {
+                    // Walk up
+                   while (target != 0xFFFF)
+                   {
+                       ref readonly var s = ref definition.GetState(target);
+                       if (s.ParentIndex == stateIndex) break;
+                       target = s.ParentIndex;
+                   }
+                }
+                
+                // If found, drill down to its initial state (mimic initialization)
+                if (target != 0xFFFF)
+                {
+                    ushort leaf = DrillDownToInitial(definition, target);
+                    SetActiveLeafId(instancePtr, instanceSize, 0, leaf);
+                }
+                else
+                {
+                    // Fallback (shouldn't happen if IsAncestor check passed)
+                    SetActiveLeafId(instancePtr, instanceSize, 0, savedStateId);
+                }
             }
             
             return true;
         }
 
+        private static ushort DrillDownToInitial(HsmDefinitionBlob definition, ushort startState)
+        {
+            ushort targetState = startState;
+            while (true)
+            {
+                ref readonly var state = ref definition.GetState(targetState);
+                if ((state.Flags & StateFlags.IsComposite) != 0 && state.FirstChildIndex != 0xFFFF)
+                {
+                    // For history restore, we follow Initial children normally.
+                    // If we hit a Parallel state, we stop?
+                    // Usually History restores into Parallel means entering Parallel.
+                    if ((state.Flags & StateFlags.IsParallel) != 0) break;
+                    
+                    targetState = state.FirstChildIndex;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            return targetState;
+        }
         private static ushort* GetHistorySlots(byte* instancePtr, int instanceSize, out int count)
         {
             switch (instanceSize)

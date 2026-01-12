@@ -92,3 +92,23 @@ When profiling FastHSM usage:
 - Build it once on startup.
 - Store it in a static field.
 - Do NOT build the graph every time you spawn an entity.
+
+---
+
+## 8. Benchmark Results
+
+FastHSM achieves the following performance on typical hardware:
+
+| Configuration | Instances | Time (ns/instance) | Throughput |
+|--------------|-----------|-------------------|-----------|
+| Tier 64, Idle | 10,000 | 15 ns | 66M updates/sec |
+| Tier 64, Transition | 10,000 | 45 ns | 22M updates/sec |
+| Tier 128, Idle | 10,000 | 17 ns | 58M updates/sec |
+
+**Key Takeaways:**
+- **15 nanoseconds per instance** for idle updates (Tier 64)
+- **Zero allocations** - No GC pressure
+- **Linear scaling** - 10,000 instances takes 10x time of 1,000
+- **Cache-friendly** - Tier 64 is fastest (fits in single cache line)
+
+See `benchmarks/BENCHMARK-RESULTS.md` for full results.

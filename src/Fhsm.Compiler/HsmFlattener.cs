@@ -317,8 +317,43 @@ namespace Fhsm.Compiler
         
         private static RegionDef[] FlattenRegions(StateMachineGraph graph)
         {
-            // Placeholder: Regions not fully implemented yet
-            return Array.Empty<RegionDef>();
+            var regionDefs = new List<RegionDef>();
+            
+            // Region 0: Global/Root
+            // Note: Use RootState's Initial child if available, or RootState itself?
+            // Usually RegionDef points to the context root.
+            // For Main region, Parent is None, Initial is Root.
+            if (graph.RootState != null)
+            {
+                regionDefs.Add(new RegionDef
+                {
+                    ParentStateIndex = 0xFFFF,
+                    InitialStateIndex = graph.RootState.FlatIndex,
+                    Priority = 0
+                });
+            }
+            
+            // Find parallel states to define orthogonal regions
+            // We iterate in FlatIndex order for determinism
+            var parallelStates = graph.States.Values
+                .Where(s => s.IsParallel)
+                .OrderBy(s => s.FlatIndex);
+                
+            foreach (var pState in parallelStates)
+            {
+                // Each child of a parallel state defines an orthogonal region
+                foreach (var child in pState.Children)
+                {
+                    regionDefs.Add(new RegionDef
+                    {
+                        ParentStateIndex = pState.FlatIndex,
+                        InitialStateIndex = child.FlatIndex,
+                        Priority = 0
+                    });
+                }
+            }
+            
+            return regionDefs.ToArray();
         }
         
         private static GlobalTransitionDef[] FlattenGlobalTransitions(

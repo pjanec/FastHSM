@@ -20,6 +20,7 @@ namespace Fhsm.Kernel.Data
         ActivityEnded = 0x08,     // Activity ended
         TimerSet = 0x09,          // Timer was set
         TimerFired = 0x0A,        // Timer fired
+        Conflict = 0x0D,          // NEW: Output lane conflict
         Error = 0xFF,             // Critical error
     }
     
@@ -140,6 +141,19 @@ namespace Fhsm.Kernel.Data
         [FieldOffset(0)] public TraceRecordHeader Header;
         [FieldOffset(8)] public ushort ErrorCode;
         [FieldOffset(10)] public ushort Reserved;
+    }
+
+    /// <summary>
+    /// Conflict trace record (12 bytes).
+    /// OpCode: Conflict (0x0D)
+    /// </summary>
+    [StructLayout(LayoutKind.Explicit, Size = 12)]
+    public struct ConflictRecord
+    {
+        [FieldOffset(0)] public TraceRecordHeader Header;
+        [FieldOffset(8)] public ushort StateIndex;
+        [FieldOffset(10)] public byte AttemptedLanes;
+        [FieldOffset(11)] public byte ConflictingLanes;
     }
 
     /// <summary>
