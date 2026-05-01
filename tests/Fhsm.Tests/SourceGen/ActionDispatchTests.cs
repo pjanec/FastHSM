@@ -10,6 +10,7 @@ using Fhsm.Kernel.Data;
 
 namespace Fhsm.Tests.SourceGen
 {
+    [Xunit.Collection("HsmActionDispatcher")]
     public unsafe class ActionDispatchTests
     {
         private static int _actionCallCount = 0;

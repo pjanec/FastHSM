@@ -5,6 +5,7 @@ using Fhsm.Kernel;
 namespace Fhsm.Tests.Kernel
 {
     /// <summary>Tests that <see cref="HsmActionDispatcher.ClearAll"/> purges both tables.</summary>
+    [Collection("HsmActionDispatcher")]
     public class ClearAllTests
     {
         [Fact]

@@ -7,6 +7,7 @@ using Fhsm.Compiler;
 
 namespace Fhsm.Tests.Examples
 {
+    [Xunit.Collection("HsmActionDispatcher")]
     public unsafe class IntegrationTests
     {
         private static int _entryCount = 0;

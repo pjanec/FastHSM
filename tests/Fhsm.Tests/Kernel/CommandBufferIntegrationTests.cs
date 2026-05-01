@@ -8,6 +8,7 @@ using Xunit;
 
 namespace Fhsm.Tests.Kernel
 {
+    [Xunit.Collection("HsmActionDispatcher")]
     public unsafe class CommandBufferIntegrationTests
     {
         // Must match delegate* <void*, void*, HsmCommandWriter*, void>
