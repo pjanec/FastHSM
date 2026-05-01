@@ -192,6 +192,7 @@ namespace Fhsm.Compiler
             if (node.IsHistory) flags |= StateFlags.IsHistory;
             if (node.IsDeepHistory) flags |= StateFlags.IsDeepHistory;
             if (node.IsParallel) flags |= StateFlags.IsParallel;
+            if (node.IsFinal) flags |= StateFlags.IsFinal;
             if (node.Children.Count > 0) flags |= StateFlags.IsComposite;
             
             return flags;

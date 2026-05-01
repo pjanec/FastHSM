@@ -99,7 +99,13 @@ namespace Fhsm.Compiler
             _state.IsHistory = true;
             return this;
         }
-        
+
+        public StateBuilder Final()
+        {
+            _state.IsFinal = true;
+            return this;
+        }
+
         public StateBuilder Child(string childName, Action<StateBuilder> configure)
         {
             var child = new StateNode(childName);

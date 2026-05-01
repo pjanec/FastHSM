@@ -55,6 +55,63 @@ namespace Fhsm.Compiler
             return errors;
         }
 
+        /// <summary>
+        /// Validate graph and additionally enforce channel-safety rules.
+        /// Channel-safety: any state whose OnEntryAction or ActivityAction writes to a
+        /// channel must have the corresponding exit-cleanup as its OnExitAction.
+        /// </summary>
+        /// <param name="graph">The state-machine graph to validate.</param>
+        /// <param name="requiredExitCleanups">
+        /// Maps channel-writing action names to their required exit-cleanup action name.
+        /// Typically sourced from the generated <c>HsmActionRegistrar.RequiredExitCleanups</c>.
+        /// </param>
+        public static List<ValidationError> Validate(
+            StateMachineGraph graph,
+            IReadOnlyDictionary<string, string>? requiredExitCleanups)
+        {
+            var errors = Validate(graph);
+            if (requiredExitCleanups != null && errors.All(e => e.Severity != ErrorSeverity.Error || e.Message != "Graph is null"))
+                ValidateChannelSafety(graph, requiredExitCleanups, errors);
+            return errors;
+        }
+
+        /// <summary>
+        /// Checks that every state whose OnEntryAction or ActivityAction writes to a
+        /// channel has the corresponding exit-cleanup action as its OnExitAction.
+        /// Call this after <see cref="Validate(StateMachineGraph)"/> with the
+        /// <c>RequiredExitCleanups</c> dictionary from the generated registrar.
+        /// </summary>
+        public static void ValidateChannelSafety(
+            StateMachineGraph graph,
+            IReadOnlyDictionary<string, string> requiredExitCleanups,
+            List<ValidationError> errors)
+        {
+            if (graph == null || requiredExitCleanups == null || requiredExitCleanups.Count == 0) return;
+
+            foreach (var state in graph.States.Values)
+            {
+                // Collect which channel-writing actions are active in this state.
+                var channelActions = new List<string>();
+                if (state.OnEntryAction != null && requiredExitCleanups.ContainsKey(state.OnEntryAction))
+                    channelActions.Add(state.OnEntryAction);
+                if (state.ActivityAction != null && requiredExitCleanups.ContainsKey(state.ActivityAction))
+                    channelActions.Add(state.ActivityAction);
+
+                foreach (var actionName in channelActions)
+                {
+                    string required = requiredExitCleanups[actionName];
+                    if (state.OnExitAction != required)
+                    {
+                        string actual = state.OnExitAction ?? "(none)";
+                        errors.Add(new ValidationError(
+                            $"Action '{actionName}' writes to a channel but OnExitAction is '{actual}' " +
+                            $"(expected '{required}'). Add OnExitAction = \"{required}\" to this state.",
+                            state.Name));
+                    }
+                }
+            }
+        }
+
         private static void ValidateSlotConflicts(StateMachineGraph graph, List<ValidationError> errors)
         {
             // For each state with orthogonal regions

@@ -80,6 +80,7 @@ namespace Fhsm.Kernel
         private static bool ValidateInstance(InstanceHeader* header, HsmDefinitionBlob definition)
         {
             if (header->MachineId != definition.Header.StructureHash) return false;
+            if ((header->Flags & InstanceFlags.Terminated) != 0) return false;
             if (header->Phase > InstancePhase.Activity) return false;
             return true;
         }
@@ -309,6 +310,11 @@ namespace Fhsm.Kernel
             
             // 4. Set Active State
             activeLeafIds[slotIndex] = targetState;
+
+            // 5. Check for terminal state.
+            ref readonly var leafStateDef = ref definition.GetState(targetState);
+            if ((leafStateDef.Flags & StateFlags.IsFinal) != 0)
+                header->Flags |= InstanceFlags.Terminated;
         }
 
         // --- Task 1: Timer Phase ---
@@ -720,6 +726,11 @@ namespace Fhsm.Kernel
             if (!historyRestored)
             {
                 activeLeafIds[0] = finalLeafId;
+
+                // Check for terminal state.
+                ref readonly var finalStateDef = ref definition.GetState(finalLeafId);
+                if ((finalStateDef.Flags & StateFlags.IsFinal) != 0)
+                    header->Flags |= InstanceFlags.Terminated;
             }
             
             // 5. Recall Deferred Events

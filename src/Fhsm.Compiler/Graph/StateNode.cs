@@ -22,6 +22,7 @@ namespace Fhsm.Compiler.Graph
         public bool IsHistory { get; set; }
         public bool IsDeepHistory { get; set; }
         public bool IsParallel { get; set; }
+        public bool IsFinal { get; set; }
         
         // Actions (function names - resolved later)
         public string? OnEntryAction { get; set; }
