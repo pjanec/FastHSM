@@ -713,7 +713,7 @@ namespace Fhsm.SourceGen
             sb.AppendLine("            var repo   = (global::Fdp.Core.EntityRepository)global::System.Runtime.InteropServices.GCHandle.FromIntPtr(bridge->WorldHandle).Target!;");
             sb.AppendLine("            ref var bb = ref repo.GetComponentRW<global::Fdp.Toolkit.Behavior.Components.BrainBlackboard>(bridge->Self);");
             sb.AppendLine("            ref var field = ref Unsafe.As<byte, " + entry.FieldTypeFqn + ">(");
-            sb.AppendLine("                ref Unsafe.AddByteOffset(ref bb.Memory[0], (IntPtr)" + entry.Offset + "));");
+            sb.AppendLine("                ref Unsafe.AddByteOffset(ref bb.BehaviorParameters[0], (IntPtr)" + entry.Offset + "));");
             if (entry.IsHeavy)
             {
                 if (entry.IsHeavyManaged)
@@ -750,7 +750,7 @@ namespace Fhsm.SourceGen
             sb.AppendLine("            var repo   = (global::Fdp.Core.EntityRepository)global::System.Runtime.InteropServices.GCHandle.FromIntPtr(bridge->WorldHandle).Target!;");
             sb.AppendLine("            ref var bb = ref repo.GetComponentRW<global::Fdp.Toolkit.Behavior.Components.BrainBlackboard>(bridge->Self);");
             sb.AppendLine("            ref var field = ref Unsafe.As<byte, " + entry.FieldTypeFqn + ">(");
-            sb.AppendLine("                ref Unsafe.AddByteOffset(ref bb.Memory[0], (IntPtr)" + entry.Offset + "));");
+            sb.AppendLine("                ref Unsafe.AddByteOffset(ref bb.BehaviorParameters[0], (IntPtr)" + entry.Offset + "));");
             if (entry.IsHeavy)
             {
                 if (entry.IsHeavyManaged)
